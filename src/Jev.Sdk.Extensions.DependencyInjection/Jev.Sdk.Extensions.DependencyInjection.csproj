@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><Description>Dependency injection integration for the unofficial Jev SDK.</Description></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../Jev.Sdk/Jev.Sdk.csproj" /><PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" /><None Include="../../README.md" Pack="true" PackagePath="/" /></ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+@host = http://localhost:5080
+POST {{host}}/evaluate
+Content-Type: application/json
+
+{"text":"I was charged twice. Please help today."}

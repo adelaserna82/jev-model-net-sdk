@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><IsPackable>false</IsPackable><UserSecretsId>jev-sdk-web-example</UserSecretsId></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/Jev.Sdk.Extensions.DependencyInjection/Jev.Sdk.Extensions.DependencyInjection.csproj" /></ItemGroup>
+</Project>
