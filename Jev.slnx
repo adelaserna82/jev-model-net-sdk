@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="samples/Jev.Scenarios/Jev.Scenarios.csproj" />
   <Project Path="src/Jev.Sdk/Jev.Sdk.csproj" />
   <Project Path="src/Jev.Sdk.Extensions.DependencyInjection/Jev.Sdk.Extensions.DependencyInjection.csproj" />
   <Project Path="tests/Jev.Sdk.Tests/Jev.Sdk.Tests.csproj" />

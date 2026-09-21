@@ -7,7 +7,7 @@ SDK comunitario **no oficial** para [TypeSafe AI Jev](https://typesafe.ai/). Lic
 Requiere .NET SDK 10. Desde la raíz:
 
 ```sh
-dotnet run --project samples/Jev.Console -- mixed --simulate
+dotnet run --project samples/Jev.Console
 ```
 
 La simulación utiliza respuestas ficticias identificadas como tales. Para usar la API real, configura `TYPESAFE_API_KEY` en tu entorno o guarda la clave mediante User Secrets:
@@ -19,7 +19,9 @@ dotnet run --project samples/Jev.Console -- mixed
 
 Sustituye TU_CLAVE localmente. No subas claves a GitHub. User Secrets es almacenamiento local de desarrollo, no una caja fuerte cifrada. Las llamadas reales pueden consumir saldo. Obtén acceso y clave desde [TypeSafe Console](https://console.typesafe.ai/).
 
-Escenarios: `noul`, `choice`, `score`, `mixed`, `routing`, `batch`, `models`, `cancel`. Todos admiten `--simulate`. Usa Ctrl+C para cancelar. Los ejemplos usan datos sintéticos en inglés; puedes modificarlos y evaluar el comportamiento con tu idioma.
+La consola abre un laboratorio retro con colores, menú y tres casos completos: soporte con un cobro duplicado, devolución con evidencias incompletas e incidencia de checkout. Permite procesar un lote, ajustar el umbral de confianza y exportar informes. Empieza siempre en simulación. Consulta el [tutorial de ejemplos](docs/examples.md).
+
+Para una ejecución no interactiva: `dotnet run --project samples/Jev.Console -- incident --simulate`. Los comandos son `support`, `returns`, `incident`, `batch`, `models`, `noul`, `choice`, `score`, `mixed`, `routing` y `cancel`.
 
 ## Utilizar la biblioteca
 
@@ -35,7 +37,7 @@ Console.WriteLine(result.Get<NoulAnswer>("refund").Noul);
 
 `ChoiceQuestion` acepta opciones con descripciones; `ChoiceQuestion.FromEnum<T>()` utiliza una enumeración y `ChoiceAnswer.AsEnum<T>()` recupera el valor C#. `ScoreQuestion` acepta 2–10 niveles ordenados. `NoulQuestion` permite descripciones opcionales para verdadero y falso. `JevContent.From(...)` admite objetos, arrays y texto; hay una sobrecarga con `JsonTypeInfo<T>` para serializar estados con metadatos generados.
 
-Consulta [guía de API y configuración](docs/usage.md), [ejemplos de consola](samples/Jev.Console/Program.cs) y [proceso de publicación](docs/releasing.md).
+Consulta [guía de API y configuración](docs/usage.md), [tutorial de ejemplos](docs/examples.md) y [proceso de publicación](docs/releasing.md).
 
 ## ASP.NET Core
 
@@ -44,7 +46,7 @@ dotnet user-secrets set "Jev:ApiKey" "TU_CLAVE" --project samples/Jev.Web
 dotnet run --project samples/Jev.Web -- --environment Development --urls http://localhost:5080
 ```
 
-Abre `samples/Jev.Web/requests.http` en tu editor para enviar una petición. La clave se queda en el servidor. Este ejemplo es para desarrollo local; añade autenticación y límites propios antes de exponerlo a Internet.
+Abre `samples/Jev.Web/requests.http` en tu editor para ejecutar los tres casos, sus variaciones de umbral y un lote. La clave se queda en el servidor. Este ejemplo es para desarrollo local; añade autenticación y límites propios antes de exponerlo a Internet.
 
 Registro en tu aplicación:
 

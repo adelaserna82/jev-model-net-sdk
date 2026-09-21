@@ -1,71 +1,181 @@
 using Jev.Sdk;
+using Jev.Scenarios;
 using Microsoft.Extensions.Configuration;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
-var simulated = args.Contains("--simulate");
-var scenario = args.FirstOrDefault(a => !a.StartsWith("--")) ?? "mixed";
+Console.OutputEncoding = Encoding.UTF8;
+var interactive = args.All(a => a.StartsWith("--", StringComparison.Ordinal)) || args.Contains("--menu");
+var simulated = interactive || args.Contains("--simulate");
+var color = !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("NO_COLOR") is null && !args.Contains("--no-color");
 var config = new ConfigurationBuilder().AddUserSecrets<SecretMarker>().Build();
+var threshold = .8;
+var reports = new List<DecisionReport>();
 using var cancel = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+void Line(string text = "", ConsoleColor ink = ConsoleColor.Gray)
+{
+    if (color) Console.ForegroundColor = ink;
+    Console.WriteLine(text);
+    if (color) Console.ResetColor();
+}
+void Header()
+{
+    Line("╔════════════════════════════════════════════════════════════╗", ConsoleColor.Cyan);
+    Line("║  J E V   / /   D E C I S I O N   T E R M I N A L          ║", ConsoleColor.Cyan);
+    Line("║  RETRO LAB                         .NET 10  ·  COMMUNITY   ║", ConsoleColor.DarkCyan);
+    Line("╚════════════════════════════════════════════════════════════╝", ConsoleColor.Cyan);
+    Line($"  {(simulated ? "SIMULACIÓN · DATOS FICTICIOS · SIN CONSUMO" : "API REAL · PUEDE CONSUMIR SALDO")}  |  umbral {threshold:P0}", ConsoleColor.Yellow);
+}
+void Render(DecisionReport report)
+{
+    reports.Add(report);
+    Line($"\n  [{report.CaseId}] {report.Title}", ConsoleColor.Cyan);
+    foreach (var (id, answer) in report.Evaluation.Answers)
+    {
+        Line($"  > {id.ToUpperInvariant()}", ConsoleColor.White);
+        if (answer is ChoiceAnswer choice)
+        {
+            Line($"    Destino: {choice.Choice} · confianza {choice.Confidence:P1}", ConsoleColor.Green);
+            foreach (var p in choice.Probabilities.OrderByDescending(p => p.Value))
+            {
+                var filled = (int)Math.Round(p.Value * 20);
+                Line($"    {p.Key,-13} [{new string('#', filled)}{new string('.', 20 - filled)}] {p.Value,6:P1}");
+            }
+        }
+        if (answer is NoulAnswer noul) Line($"    Riesgo de demorar atención: {noul.Noul:P1}");
+        if (answer is ScoreAnswer score)
+        {
+            Line($"    Impacto: {score.Score:F2}/3 · confianza {score.Confidence:P1}");
+            foreach (var level in score.Legend) Line($"    {level.Key}: {level.Value}");
+        }
+    }
+    Line($"  >>> {report.Recommendation}", report.Recommendation == "REVISIÓN HUMANA" ? ConsoleColor.Yellow : ConsoleColor.Green);
+    Line("  " + report.Explanation);
+    Line($"  Modelo: {report.Evaluation.Model} | {report.ElapsedMilliseconds:F0} ms | tokens entrada/salida: {report.Evaluation.Usage.InputTokens}/{report.Evaluation.Usage.OutputTokens}", ConsoleColor.DarkGray);
+}
+async Task<DecisionReport> Evaluate(DemoCase item, CancellationToken ct)
+{
+    using var transport = simulated ? new HttpClient(new DemoHandler(item)) : null;
+    using var client = new JevClient(new() { ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"] }, transport);
+    return await ScenarioCatalog.RunAsync(client, item, simulated, threshold, ct);
+}
+async Task Run(string command)
+{
+    if (command == "batch")
+    {
+        Line("  Lote de 3 expedientes · concurrencia máxima 2", ConsoleColor.Cyan);
+        var results = new System.Collections.Concurrent.ConcurrentBag<DecisionReport>();
+        await Parallel.ForEachAsync(ScenarioCatalog.Cases, new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = cancel.Token }, async (item, ct) => results.Add(await Evaluate(item, ct)));
+        foreach (var result in results.OrderBy(r => r.CaseId)) Render(result);
+        Line($"\n  RESUMEN: {results.Count} evaluados · {results.Count(r => r.Recommendation == "REVISIÓN HUMANA")} para revisión · {results.Sum(r => r.Evaluation.Usage.InputTokens)} tokens de entrada.", ConsoleColor.Cyan);
+        return;
+    }
+    var item = ScenarioCatalog.Find(command is "mixed" or "routing" or "noul" or "choice" or "score" or "cancel" or "models" ? "support" : command);
+    using var transport = simulated ? new HttpClient(new DemoHandler(item)) : null;
+    using var client = new JevClient(new() { ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"] }, transport);
+    if (command == "models")
+    {
+        foreach (var model in (await client.ListModelsAsync(cancel.Token)).Models) Line($"  {model.Name} | {model.Description} | {model.ReleaseDate}", ConsoleColor.Green);
+        return;
+    }
+    if (command == "cancel")
+    {
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
+        await client.EvaluateAsync(ScenarioCatalog.Build(item), cancelled.Token);
+        return;
+    }
+    if (command is "noul" or "choice" or "score")
+    {
+        var request = ScenarioCatalog.Build(item);
+        var keep = command == "noul" ? "risk" : command == "choice" ? "route" : "impact";
+        foreach (var key in request.Questions.Keys.Where(k => k != keep).ToArray()) request.Questions.Remove(key);
+        Line(JsonSerializer.Serialize(await client.EvaluateAsync(request, cancel.Token), new JsonSerializerOptions { WriteIndented = true }));
+        return;
+    }
+    Line($"\n  EXPEDIENTE: {item.Title}", ConsoleColor.Cyan);
+    Line("  " + item.Description);
+    Line(JsonSerializer.Serialize(item.State, new JsonSerializerOptions { WriteIndented = true }), ConsoleColor.DarkGray);
+    Line("  Consulta: destino + riesgo de demora + impacto. La recomendación se compone en C#.", ConsoleColor.Yellow);
+    Render(await ScenarioCatalog.RunAsync(client, item, simulated, threshold, cancel.Token));
+}
 try
 {
-    using var transport = simulated ? new HttpClient(new SimulationHandler()) : null;
-    using var client = new JevClient(new() { ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"] }, transport);
-    Console.WriteLine(simulated ? "SIMULACIÓN: respuestas inventadas, sin llamadas ni consumo real." : "MODO REAL: se usará la API de TypeSafe y puede consumir saldo.");
-    var state = JevContent.From(new { ticket = "I was charged twice. Please refund the duplicate payment today." });
-    EvaluationRequest Request() => new EvaluationRequest(state)
-        .Add("department", ChoiceQuestion.FromEnum<Department>("Which department should handle this ticket?"))
-        .Add("urgency", new NoulQuestion("Is the request time-sensitive?"))
-        .Add("frustration", new ScoreQuestion("How frustrated is the customer?", ["Calm", "Frustrated", "Very angry"]));
-    if (scenario == "models") Console.WriteLine(JsonSerializer.Serialize(await client.ListModelsAsync(cancel.Token)));
-    else if (scenario == "batch")
-        await Parallel.ForEachAsync(Enumerable.Range(0, 5), new ParallelOptions { MaxDegreeOfParallelism = 2, CancellationToken = cancel.Token }, async (i, ct) => { var result = await client.EvaluateAsync(Request(), ct); Console.WriteLine($"Registro {i}: {result.Get<ChoiceAnswer>("department").Choice}; tokens: {result.Usage.InputTokens}"); });
+    if (!interactive)
+    {
+        Header();
+        var command = args.FirstOrDefault(a => !a.StartsWith("--")) ?? "mixed";
+        if (command == "help") Line("support | returns | incident | batch | models | noul | choice | score | mixed | routing | cancel. Opciones: --simulate, --no-color, --menu");
+        else await Run(command);
+    }
     else
     {
-        var request = scenario switch
+        while (!cancel.IsCancellationRequested)
         {
-            "noul" => new EvaluationRequest(state).Add("urgency", new NoulQuestion("Is this urgent?")),
-            "choice" => new EvaluationRequest(state).Add("department", ChoiceQuestion.FromEnum<Department>("Which department?")),
-            "score" => new EvaluationRequest(state).Add("frustration", new ScoreQuestion("How frustrated?", ["Calm", "Frustrated", "Very angry"])),
-            "mixed" or "routing" or "cancel" => Request(),
-            _ => throw new ArgumentException("Escenarios: noul, choice, score, mixed, routing, batch, models, cancel. Añade --simulate para trabajar sin clave.")
-        };
-        if (scenario == "cancel") cancel.Cancel();
-        var result = await client.EvaluateAsync(request, cancel.Token);
-        Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }));
-        if (scenario == "routing")
-        {
-            var department = result.Get<ChoiceAnswer>("department");
-            Console.WriteLine(department.Confidence >= 0.8 ? $"Derivar a: {department.AsEnum<Department>()}" : "Revisión humana necesaria.");
-        }
-    }
-}
-catch (OperationCanceledException) { Console.WriteLine("Operación cancelada."); }
-catch (JevApiException e) { Console.Error.WriteLine($"Error de API: {(int)e.StatusCode} ({e.Kind})."); Environment.ExitCode = 1; }
-catch (Exception e) when (e is JevException or ArgumentException) { Console.Error.WriteLine(e.Message); Environment.ExitCode = 1; }
-
-internal class SecretMarker;
-internal enum Department { Billing, Technical, Sales }
-internal sealed class SimulationHandler : HttpMessageHandler
-{
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-    {
-        ct.ThrowIfCancellationRequested();
-        object result;
-        if (request.Method == HttpMethod.Get) result = new { models = new[] { new { name = "jev-simulated", description = "Synthetic fixture", release_date = "2026-09-21" } } };
-        else
-        {
-            using var json = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
-            var answers = new Dictionary<string, object>();
-            foreach (var q in json.RootElement.GetProperty("questions").EnumerateObject())
-                answers[q.Name] = q.Value.GetProperty("type").GetString() switch
+            Header();
+            Line("  [1] SOPORTE       Cobros, reclamaciones y prioridades", ConsoleColor.Green);
+            Line("  [2] PEDIDOS       Devoluciones y garantía", ConsoleColor.Green);
+            Line("  [3] OPERACIONES   Incidencias de producción", ConsoleColor.Green);
+            Line("  [4] LOTE          Evaluar los tres expedientes");
+            Line("  [5] MODELOS       Consultar modelos disponibles");
+            Line("  [6] MODO          Cambiar simulación / API real");
+            Line("  [7] UMBRAL        Ajustar confianza para derivación");
+            Line("  [8] EXPORTAR      Guardar informes de esta sesión");
+            Line("  [9] AYUDA         Cómo funciona este laboratorio");
+            Line("  [0] SALIR", ConsoleColor.DarkGray);
+            Console.Write("\n  JEV:\\LAB> ");
+            var input = Console.ReadLine();
+            if (input is null or "0") break;
+            try
+            {
+                switch (input.Trim())
                 {
-                    "choice" => new { type = "choice", choice = "Billing", probabilities = new { Billing = .9, Technical = .08, Sales = .02 }, confidence = .85 },
-                    "score" => new { type = "score", score = 1.0, probabilities = new Dictionary<string, double> { ["0"] = .1, ["1"] = .8, ["2"] = .1 }, legend = new Dictionary<string, string> { ["0"] = "Calm", ["1"] = "Frustrated", ["2"] = "Very angry" }, confidence = .8 },
-                    _ => (object)new { type = "noul", noul = .95 }
-                };
-            result = new { model = "jev-simulated", answers, usage = new { input_tokens = 0, output_tokens = 0 } };
+                    case "1": await Run("support"); break;
+                    case "2": await Run("returns"); break;
+                    case "3": await Run("incident"); break;
+                    case "4": await Run("batch"); break;
+                    case "5": await Run("models"); break;
+                    case "6":
+                        if (simulated)
+                        {
+                            if (string.IsNullOrWhiteSpace(config["Jev:ApiKey"] ?? Environment.GetEnvironmentVariable("TYPESAFE_API_KEY")))
+                                Line("  Configura TYPESAFE_API_KEY o User Secrets Jev:ApiKey y vuelve a abrir el programa.", ConsoleColor.Yellow);
+                            else { Line("  Las próximas evaluaciones harán llamadas facturables. Escribe REAL para activar:"); simulated = Console.ReadLine() != "REAL"; }
+                        }
+                        else simulated = true;
+                        break;
+                    case "7":
+                        Console.Write("  Umbral 0–1 (ejemplo 0.8): ");
+                        if (double.TryParse(Console.ReadLine()?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) && value >= 0 && value <= 1) threshold = value;
+                        else Line("  Valor inválido; se conserva el umbral.", ConsoleColor.Yellow);
+                        break;
+                    case "8":
+                        if (reports.Count == 0) { Line("  Primero evalúa un expediente."); break; }
+                        Directory.CreateDirectory("artifacts/reports");
+                        var path = Path.GetFullPath($"artifacts/reports/jev-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}.json");
+                        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(reports, new JsonSerializerOptions { WriteIndented = true }), cancel.Token);
+                        Line($"  Guardado: {path}", ConsoleColor.Green);
+                        break;
+                    case "9":
+                        Line("  1. Inspecciona los hechos y la política de cada expediente.");
+                        Line("  2. Jev evalúa preguntas independientes: Choice, Noul y Score.");
+                        Line("  3. C# combina resultados y umbrales; nunca ejecuta la acción.");
+                        Line("  4. Ajusta el umbral y vuelve a evaluar para comparar.");
+                        Line("  Simulación = fixtures fijos, no inferencia ni precisión medida.");
+                        Line("  Confianza no equivale a certeza. Ctrl+C cancela y sale.");
+                        Line("  Tutorial: docs/examples.md · NO_COLOR=1 desactiva colores.");
+                        break;
+                    default: Line("  Opción no válida. Elige 0–9.", ConsoleColor.Yellow); break;
+                }
+            }
+            catch (Exception e) when (e is JevException or ArgumentException or IOException or UnauthorizedAccessException)
+            { Line("  ERROR: " + e.Message, ConsoleColor.Red); }
+            if (!cancel.IsCancellationRequested) { Console.Write("\n  ENTER para volver al menú..."); if (Console.ReadLine() is null) break; }
         }
-        return new(System.Net.HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(result)) };
     }
 }
+catch (OperationCanceledException) { Line("  Operación cancelada.", ConsoleColor.Yellow); }
+catch (Exception e) when (e is JevException or ArgumentException) { Line("  ERROR: " + e.Message, ConsoleColor.Red); Environment.ExitCode = 1; }
+finally { if (color) Console.ResetColor(); }
+internal class SecretMarker;
