@@ -19,8 +19,12 @@ public sealed class ClientTests
         {
             Assert.Equal("https://api.typesafe.ai/v1/systemone", r.RequestUri!.AbsoluteUri);
             Assert.Equal("Bearer", r.Headers.Authorization!.Scheme);
+            Assert.Contains(r.Headers.Accept, header => header.MediaType == "application/json");
+            Assert.Contains("Jev.Sdk/0.1.0", r.Headers.UserAgent.ToString());
             using var json = JsonDocument.Parse(await r.Content!.ReadAsStringAsync(ct));
+            Assert.Equal("application/json", r.Content.Headers.ContentType!.MediaType);
             Assert.Equal("ticket", json.RootElement.GetProperty("state").GetString());
+            Assert.Equal("jev-latest", json.RootElement.GetProperty("model").GetString());
             Assert.Equal("noul", json.RootElement.GetProperty("questions").GetProperty("urgent").GetProperty("type").GetString());
             return Response();
         }));
