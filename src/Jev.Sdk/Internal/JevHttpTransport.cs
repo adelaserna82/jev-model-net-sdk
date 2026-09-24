@@ -8,6 +8,7 @@ namespace Jev.Sdk;
 
 internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiKey, TimeSpan timeout, int maxRetries)
 {
+    // El transporte concentra red, reintentos, errores y telemetría.
     private const string DiagnosticName = "Jev.Sdk";
     private static readonly ActivitySource Activities = new(DiagnosticName);
     private static readonly Meter Metrics = new(DiagnosticName);
@@ -17,6 +18,7 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
 
     public async Task<(T Result, IReadOnlyDictionary<string, string[]> Headers)> SendAsync<T>(HttpMethod method, string path, string? payload, JsonSerializerOptions json, CancellationToken cancellationToken)
     {
+        // Este plazo cubre tanto las peticiones como las esperas entre reintentos.
         using var activity = Activities.StartActivity(path, ActivityKind.Client);
         var start = Stopwatch.GetTimestamp();
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -28,6 +30,7 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
             {
                 using var message = CreateRequest(method, path, payload);
                 using var response = await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
+                // Solo se repiten estados transitorios dentro del presupuesto configurado.
                 if (attempt < maxRetries && IsTransient(response.StatusCode))
                 {
                     var wait = RetryDelay(response, attempt);
@@ -37,6 +40,7 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
                     continue;
                 }
 
+                // Las cabeceras se devuelven al consumidor para facilitar el diagnóstico.
                 var headers = response.Headers.Concat(response.Content.Headers).ToDictionary(header => header.Key, header => header.Value.ToArray(), StringComparer.OrdinalIgnoreCase);
                 var body = await response.Content.ReadAsStringAsync(deadline.Token).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode) throw new JevApiException(response.StatusCode, body, headers);
@@ -50,6 +54,7 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
                 }
             }
         }
+        // La cancelación del llamante se conserva; solo el plazo interno se traduce a timeout.
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
             Errors.Add(1);
@@ -74,6 +79,7 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
 
     private HttpRequestMessage CreateRequest(HttpMethod method, string path, string? payload)
     {
+        // Todas las peticiones comparten autenticación y cabeceras JSON.
         var message = new HttpRequestMessage(method, new Uri(baseUrl, path));
         message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
         message.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -82,8 +88,10 @@ internal sealed class JevHttpTransport(HttpClient http, Uri baseUrl, string apiK
         return message;
     }
 
+    // Son reintentables los límites de frecuencia y algunos fallos temporales del servicio.
     private static bool IsTransient(System.Net.HttpStatusCode status) => (int)status is 429 or 529 or 502 or 503 or 504;
 
+    // Retry-After tiene prioridad; si falta, se usa backoff exponencial con variación.
     private static TimeSpan RetryDelay(HttpResponseMessage response, int attempt) =>
         response.Headers.RetryAfter?.Delta
         ?? (response.Headers.RetryAfter?.Date - DateTimeOffset.UtcNow)

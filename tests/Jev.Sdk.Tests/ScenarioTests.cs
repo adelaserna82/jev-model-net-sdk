@@ -6,10 +6,11 @@ namespace Jev.Sdk.Tests;
 
 public sealed class ScenarioTests
 {
+    // Verifica que los tres escenarios produzcan recomendaciones diferentes.
     [Theory]
-    [InlineData("support", "DERIVAR A BILLING")]
+    [InlineData("support", "DERIVAR A FACTURACIÓN")]
     [InlineData("returns", "REVISIÓN HUMANA")]
-    [InlineData("incident", "DERIVAR A ONCALL")]
+    [InlineData("incident", "DERIVAR A GUARDIA")]
     public async Task CasesProduceDistinctRecommendations(string id, string expected)
     {
         var item = ScenarioCatalog.Find(id);
@@ -27,6 +28,7 @@ public sealed class ScenarioTests
         Assert.Contains("no se ejecutan", result.Explanation);
     }
 
+    // El umbral modifica una decisión ambigua sin alterar la evaluación recibida.
     [Fact]
     public async Task ThresholdChangesAmbiguousDecision()
     {
@@ -35,7 +37,7 @@ public sealed class ScenarioTests
         using var client = new JevClient(new() { ApiKey = "test-only" }, http);
 
         Assert.Equal("REVISIÓN HUMANA", (await ScenarioCatalog.RunAsync(client, item, true, .8)).Recommendation);
-        Assert.Equal("DERIVAR A WARRANTY", (await ScenarioCatalog.RunAsync(client, item, true, .5)).Recommendation);
+        Assert.Equal("DERIVAR A GARANTÍA", (await ScenarioCatalog.RunAsync(client, item, true, .5)).Recommendation);
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => ScenarioCatalog.RunAsync(client, item, true, double.NaN));
     }
 }

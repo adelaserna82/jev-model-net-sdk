@@ -8,11 +8,13 @@ namespace Jev.Sdk.Tests;
 
 public sealed class ClientTests
 {
+    // Respuesta mínima válida reutilizada por las pruebas de contrato del cliente.
     private const string Good = """{"model":"jev-test","answers":{"urgent":{"type":"noul","noul":0.8}},"usage":{"input_tokens":3,"output_tokens":2}}""";
     private static EvaluationRequest Request() => new EvaluationRequest("ticket").Add("urgent", new NoulQuestion("Urgent?"));
     private static JevClient Client(Handler h, int retries = 2, TimeSpan? timeout = null) => new(new() { ApiKey = "test-secret", MaxRetries = retries, Timeout = timeout ?? TimeSpan.FromSeconds(5) }, new HttpClient(h));
     private static HttpResponseMessage Response(string json = Good, HttpStatusCode status = HttpStatusCode.OK) => new(status) { Content = new StringContent(json) };
 
+    // Comprueba URL, autenticación, cabeceras y forma del payload enviado.
     [Fact] public async Task RequestMatchesContract()
     {
         using var client = Client(new(async (r, ct) =>
@@ -32,6 +34,7 @@ public sealed class ClientTests
         Assert.Equal(.8, result.Get<NoulAnswer>("urgent").Noul);
         Assert.Equal(3, result.Usage.InputTokens);
     }
+    // Los estados transitorios se reintentan hasta el presupuesto configurado.
     [Theory] [InlineData(429)] [InlineData(529)] [InlineData(502)] [InlineData(503)] [InlineData(504)]
     public async Task RetriesTemporaryErrors(int status)
     {
@@ -39,6 +42,7 @@ public sealed class ClientTests
         using var client = Client(new((_, _) => { calls++; var r = calls == 1 ? Response("{}", (HttpStatusCode)status) : Response(); r.Headers.TryAddWithoutValidation("Retry-After", "0"); return Task.FromResult(r); }));
         await client.EvaluateAsync(Request()); Assert.Equal(2, calls);
     }
+    // Los errores permanentes se devuelven al consumidor sin reintentar.
     [Theory] [InlineData(401)] [InlineData(403)] [InlineData(422)]
     public async Task PermanentErrorsAreNotRetried(int status)
     {
@@ -47,6 +51,7 @@ public sealed class ClientTests
         var error = await Assert.ThrowsAsync<JevApiException>(() => client.EvaluateAsync(Request()));
         Assert.Equal(status, (int)error.StatusCode); Assert.Equal(1, calls); Assert.DoesNotContain("test-secret", error.ToString());
     }
+    // Una respuesta vacía, nula o no JSON se traduce en JevResponseException.
     [Theory] [InlineData("{}")] [InlineData("null")] [InlineData("not json")]
     public async Task RejectsMalformedResponses(string json)
     {
@@ -66,6 +71,7 @@ public sealed class ClientTests
         Assert.Throws<ArgumentException>(() => Request().Add("urgent", new NoulQuestion("duplicate")));
         Assert.Throws<ArgumentException>(() => JevContent.From(42));
     }
+    // La cancelación del llamante no se confunde con el timeout interno del SDK.
     [Fact] public async Task CancellationAndTimeoutAreDistinct()
     {
         using var client = Client(new(async (_, ct) => { await Task.Delay(Timeout.Infinite, ct); return Response(); }), timeout: TimeSpan.FromMilliseconds(30));
@@ -85,16 +91,19 @@ public sealed class ClientTests
         new JevClient(new() { ApiKey = "test" }, http).Dispose();
         using var response = await http.GetAsync("https://example.test/"); Assert.True(response.IsSuccessStatusCode);
     }
+    // El listado conserva modelos, extensiones JSON y cabeceras HTTP.
     [Fact] public async Task ModelsAndMetadata()
     {
         using var client = Client(new((r, _) => { Assert.EndsWith("/v1/models", r.RequestUri!.AbsoluteUri); var response = Response("""{"models":[{"name":"jev-latest","description":"Jev","release_date":"2026-09-17"}],"future":true}"""); response.Headers.Add("x-request-id", "123"); return Task.FromResult(response); }));
         var models = await client.ListModelsAsync(); Assert.Single(models.Models); Assert.Equal("123", models.Headers["x-request-id"][0]); Assert.True(models.Extra!["future"].GetBoolean());
     }
+    // La extensión DI registra el contrato público y crea un JevClient.
     [Fact] public void DependencyInjectionResolvesClient()
     {
         using var services = new ServiceCollection().AddJev(o => o.ApiKey = "test").BuildServiceProvider();
         Assert.IsType<JevClient>(services.GetRequiredService<IJevClient>());
     }
+    // Choice y Score deben serializarse y deserializarse como respuestas polimórficas.
     [Fact] public async Task StructuredChoiceAndScore()
     {
         var request = new EvaluationRequest(JevContent.From(new { text = "hello" }))
@@ -126,6 +135,7 @@ public sealed class ClientTests
 
 public sealed class LiveTests
 {
+    // Esta prueba solo se activa explícitamente porque consume la API real.
     [LiveFact] public async Task EvaluateAgainstTypeSafe()
     {
         using var client = new JevClient();

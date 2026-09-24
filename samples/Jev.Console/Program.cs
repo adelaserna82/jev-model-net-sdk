@@ -5,36 +5,43 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 
+// La consola usa UTF-8 para dibujar el laboratorio y mostrar acentos correctamente.
 Console.OutputEncoding = Encoding.UTF8;
+// Sin argumentos se abre el menú; --simulate fuerza el transporte ficticio en modo directo.
 var interactive = args.All(a => a.StartsWith("--", StringComparison.Ordinal)) || args.Contains("--menu");
 var simulated = interactive || args.Contains("--simulate");
 var color = !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("NO_COLOR") is null && !args.Contains("--no-color");
+// User Secrets permite guardar la clave sin introducirla en el repositorio.
 var config = new ConfigurationBuilder().AddUserSecrets<SecretMarker>().Build();
 var threshold = .8;
 var reports = new List<DecisionReport>();
 using var cancel = new CancellationTokenSource();
 Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancel.Cancel(); };
+// Centraliza colores y escritura para que el programa funcione también redirigido.
 void Line(string text = "", ConsoleColor ink = ConsoleColor.Gray)
 {
     if (color) Console.ForegroundColor = ink;
     Console.WriteLine(text);
     if (color) Console.ResetColor();
 }
+// Muestra el modo actual y el umbral que se aplicará a la recomendación.
 void Header()
 {
     Line("╔════════════════════════════════════════════════════════════╗", ConsoleColor.Cyan);
     Line("║  J E V   / /   D E C I S I O N   T E R M I N A L          ║", ConsoleColor.Cyan);
-    Line("║  RETRO LAB                         .NET 10  ·  COMMUNITY   ║", ConsoleColor.DarkCyan);
+    Line("║  LABORATORIO RETRO                 .NET 10  ·  COMUNITARIO ║", ConsoleColor.DarkCyan);
     Line("╚════════════════════════════════════════════════════════════╝", ConsoleColor.Cyan);
     Line($"  {(simulated ? "SIMULACIÓN · DATOS FICTICIOS · SIN CONSUMO" : "API REAL · PUEDE CONSUMIR SALDO")}  |  umbral {threshold:P0}", ConsoleColor.Yellow);
 }
+// Traduce la respuesta estructurada a un informe legible para una persona.
 void Render(DecisionReport report)
 {
     reports.Add(report);
     Line($"\n  [{report.CaseId}] {report.Title}", ConsoleColor.Cyan);
     foreach (var (id, answer) in report.Evaluation.Answers)
     {
-        Line($"  > {id.ToUpperInvariant()}", ConsoleColor.White);
+        var label = id switch { "route" => "DESTINO", "risk" => "RIESGO", "impact" => "IMPACTO", _ => id.ToUpperInvariant() };
+        Line($"  > {label}", ConsoleColor.White);
         if (answer is ChoiceAnswer choice)
         {
             Line($"    Destino: {choice.Choice} · confianza {choice.Confidence:P1}", ConsoleColor.Green);
@@ -57,12 +64,15 @@ void Render(DecisionReport report)
 }
 async Task<DecisionReport> Evaluate(DemoCase item, CancellationToken ct)
 {
+    // En simulación el HttpClient usa fixtures locales; en real usa la API configurada.
     using var transport = simulated ? new HttpClient(new DemoHandler(item)) : null;
     using var client = new JevClient(new() { ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"] }, transport);
     return await ScenarioCatalog.RunAsync(client, item, simulated, threshold, ct);
 }
 async Task Run(string command)
 {
+    // Ejecuta una orden del menú o de la línea de comandos.
+    // El lote limita la concurrencia para no saturar el servicio.
     if (command == "batch")
     {
         Line("  Lote de 3 expedientes · concurrencia máxima 2", ConsoleColor.Cyan);
@@ -75,17 +85,20 @@ async Task Run(string command)
     var item = ScenarioCatalog.Find(command is "mixed" or "routing" or "noul" or "choice" or "score" or "cancel" or "models" ? "support" : command);
     using var transport = simulated ? new HttpClient(new DemoHandler(item)) : null;
     using var client = new JevClient(new() { ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"] }, transport);
+    // Este comando solo consulta el catálogo de modelos.
     if (command == "models")
     {
         foreach (var model in (await client.ListModelsAsync(cancel.Token)).Models) Line($"  {model.Name} | {model.Description} | {model.ReleaseDate}", ConsoleColor.Green);
         return;
     }
+    // Demuestra que una cancelación del llamante se propaga hasta el SDK.
     if (command == "cancel")
     {
         using var cancelled = new CancellationTokenSource(); cancelled.Cancel();
         await client.EvaluateAsync(ScenarioCatalog.Build(item), cancelled.Token);
         return;
     }
+    // Estos comandos muestran cada tipo de pregunta de forma aislada.
     if (command is "noul" or "choice" or "score")
     {
         var request = ScenarioCatalog.Build(item);
@@ -100,6 +113,7 @@ async Task Run(string command)
     Line("  Consulta: destino + riesgo de demora + impacto. La recomendación se compone en C#.", ConsoleColor.Yellow);
     Render(await ScenarioCatalog.RunAsync(client, item, simulated, threshold, cancel.Token));
 }
+// El bloque principal convierte errores esperables en mensajes útiles para la consola.
 try
 {
     if (!interactive)
@@ -136,6 +150,7 @@ try
                     case "3": await Run("incident"); break;
                     case "4": await Run("batch"); break;
                     case "5": await Run("models"); break;
+                    // El modo real requiere una confirmación explícita porque puede consumir saldo.
                     case "6":
                         if (simulated)
                         {
@@ -145,11 +160,13 @@ try
                         }
                         else simulated = true;
                         break;
+                    // El umbral cambia cuándo una confianza se considera suficiente para derivar.
                     case "7":
                         Console.Write("  Umbral 0–1 (ejemplo 0.8): ");
                         if (double.TryParse(Console.ReadLine()?.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) && value >= 0 && value <= 1) threshold = value;
                         else Line("  Valor inválido; se conserva el umbral.", ConsoleColor.Yellow);
                         break;
+                    // Los informes de la sesión se guardan como JSON para inspección posterior.
                     case "8":
                         if (reports.Count == 0) { Line("  Primero evalúa un expediente."); break; }
                         Directory.CreateDirectory("artifacts/reports");
@@ -157,6 +174,7 @@ try
                         await File.WriteAllTextAsync(path, JsonSerializer.Serialize(reports, new JsonSerializerOptions { WriteIndented = true }), cancel.Token);
                         Line($"  Guardado: {path}", ConsoleColor.Green);
                         break;
+                    // La ayuda resume el flujo conceptual del laboratorio.
                     case "9":
                         Line("  1. Inspecciona los hechos y la política de cada expediente.");
                         Line("  2. Jev evalúa preguntas independientes: Choice, Noul y Score.");

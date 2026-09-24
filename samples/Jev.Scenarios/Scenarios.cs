@@ -6,40 +6,44 @@ using System.Text.Json;
 namespace Jev.Scenarios;
 
 public sealed record DemoCase(string Id, string Title, string Description, object State, string FixtureChoice, double FixtureConfidence, double FixtureRisk, double FixtureScore);
+// Agrupa todo lo que la consola necesita para ejecutar y presentar una decisión.
 public sealed record DecisionReport(string CaseId, string Title, bool Simulated, double Threshold, string Recommendation, string Explanation, double ElapsedMilliseconds, EvaluationResponse Evaluation);
 
 public static class ScenarioCatalog
 {
+    // Los casos son datos demostrativos; sus fixtures no representan precisión de un modelo real.
     public static IReadOnlyList<DemoCase> Cases { get; } =
     [
         new("support", "Soporte | Cobro duplicado", "Clasifica una reclamación contrastando mensaje, pagos e historial.",
-            new { customer = new { tier = "Business", accountAgeMonths = 18 }, message = "We were charged twice for invoice INV-2048. Payroll closes today. Please refund the duplicate.", payments = new[] { new { id = "PAY-1", invoice = "INV-2048", amount = 149, currency = "EUR", status = "settled" }, new { id = "PAY-2", invoice = "INV-2048", amount = 149, currency = "EUR", status = "settled" } }, history = new[] { "First report", "No previous refunds" }, policy = "Billing must verify settled duplicate transactions before refunding. Never execute a refund from this evaluation." },
-            "Billing", .92, .86, 2.1),
+            new { customer = new { tier = "Empresa", accountAgeMonths = 18 }, message = "Se ha cobrado dos veces la factura INV-2048. La nómina se cierra hoy. Solicito el reembolso del duplicado.", payments = new[] { new { id = "PAY-1", invoice = "INV-2048", amount = 149, currency = "EUR", status = "liquidado" }, new { id = "PAY-2", invoice = "INV-2048", amount = 149, currency = "EUR", status = "liquidado" } }, history = new[] { "Primera reclamación", "Sin reembolsos anteriores" }, policy = "Facturación debe verificar los cobros duplicados liquidados antes de reembolsar. Nunca ejecutes un reembolso desde esta evaluación." },
+            "Facturación", .92, .86, 2.1),
         new("returns", "Pedidos | Devolución ambigua", "Combina política comercial, entrega, estado del producto y evidencias.",
-            new { order = new { id = "ORD-572", product = "Wireless headphones", price = 89.90, deliveredDaysAgo = 34 }, message = "One side stopped working. I opened the box last week. Can I return them?", evidence = new { receipt = true, photos = false, confirmedDefect = false }, policy = new { changeOfMindWindowDays = 30, defectiveProducts = "Send to warranty assessment; request evidence before approving.", missingEvidence = "Human review required." } },
-            "Warranty", .62, .45, 1.6),
+            new { order = new { id = "ORD-572", product = "Auriculares inalámbricos", price = 89.90, deliveredDaysAgo = 34 }, message = "Un lado ha dejado de funcionar. Abrí la caja la semana pasada. ¿Puedo devolverlos?", evidence = new { receipt = true, photos = false, confirmedDefect = false }, policy = new { changeOfMindWindowDays = 30, defectiveProducts = "Enviar a revisión de garantía y solicitar pruebas antes de aprobar.", missingEvidence = "Se requiere revisión humana." } },
+            "Garantía", .62, .45, 1.6),
         new("incident", "Operaciones | Caída de pagos", "Prioriza una incidencia con métricas, alcance y cambios recientes.",
-            new { service = "Checkout", environment = "production", observations = new { errorRatePercent = 38, baselineErrorRatePercent = .2, affectedCustomers = 420, durationMinutes = 12 }, events = new[] { "Deployment 15 minutes ago", "Payment provider status unknown", "Database healthy" }, message = "Customers cannot finish purchases. Support queue rising.", runbook = "Page the on-call team for sustained checkout errors above 5%. Verify deployment correlation before rollback. Do not change production automatically." },
-            "OnCall", .94, .97, 2.9)
+            new { service = "Compra", environment = "producción", observations = new { errorRatePercent = 38, baselineErrorRatePercent = .2, affectedCustomers = 420, durationMinutes = 12 }, events = new[] { "Despliegue hace 15 minutos", "Estado del proveedor de pagos desconocido", "Base de datos saludable" }, message = "Los clientes no pueden terminar sus compras. La cola de soporte está creciendo.", runbook = "Avisa al equipo de guardia si los errores de compra superan el 5% de forma sostenida. Verifica la relación con el despliegue antes de revertirlo. No cambies producción automáticamente." },
+            "Guardia", .94, .97, 2.9)
     ];
 
     public static DemoCase Find(string id) => Cases.FirstOrDefault(c => c.Id == id) ?? throw new ArgumentException($"Caso desconocido: {id}");
     public static EvaluationRequest Build(DemoCase item)
     {
+        // Cada expediente se convierte en tres preguntas independientes del SDK.
         var criteria = item.Id switch
         {
-            "support" => new Dictionary<string, JevContent?> { ["Billing"] = "Payment, invoice or refund investigation.", ["Technical"] = "Product malfunction unrelated to payments.", ["Sales"] = "Pre-purchase or pricing enquiry." },
-            "returns" => new Dictionary<string, JevContent?> { ["Return"] = "Eligible ordinary return under the supplied policy.", ["Warranty"] = "Potential defect requiring warranty assessment.", ["Clarify"] = "Insufficient information to select a process." },
-            _ => new Dictionary<string, JevContent?> { ["OnCall"] = "Immediate incident response.", ["Investigate"] = "Noncritical technical investigation.", ["Monitor"] = "Observe; no current incident evidence." }
+            "support" => new Dictionary<string, JevContent?> { ["Facturación"] = "Investigación de pagos, facturas o reembolsos.", ["Técnico"] = "Fallo del producto no relacionado con pagos.", ["Ventas"] = "Consulta previa a la compra o sobre precios." },
+            "returns" => new Dictionary<string, JevContent?> { ["Devolución"] = "Devolución ordinaria admisible según la política indicada.", ["Garantía"] = "Posible defecto que requiere revisión de garantía.", ["Aclarar"] = "Información insuficiente para seleccionar un proceso." },
+            _ => new Dictionary<string, JevContent?> { ["Guardia"] = "Respuesta inmediata ante una incidencia.", ["Investigar"] = "Investigación técnica no crítica.", ["Monitorizar"] = "Observar; no hay evidencias actuales de una incidencia." }
         };
         return new EvaluationRequest(JevContent.From(item.State))
-            .Add("route", new ChoiceQuestion("Select the responsible workflow using the supplied facts and policy. Do not assume missing evidence.", criteria))
-            .Add("risk", new NoulQuestion("Would delaying human attention until the next working day materially harm the customer or service?", "Concrete time-sensitive harm is supported by the supplied facts.", "No concrete time-sensitive harm is supported."))
-            .Add("impact", new ScoreQuestion("Rate the operational impact supported by the evidence.", ["No material impact", "Limited inconvenience", "Significant disruption to a customer", "Widespread or critical service disruption"]));
+            .Add("route", new ChoiceQuestion("Selecciona el flujo responsable usando los hechos y la política proporcionados. No supongas evidencias ausentes.", criteria))
+            .Add("risk", new NoulQuestion("¿Retrasar la atención humana hasta el siguiente día laborable perjudicaría materialmente al cliente o al servicio?", "Los hechos aportados respaldan un perjuicio concreto y urgente.", "No hay hechos que respalden un perjuicio concreto y urgente."))
+            .Add("impact", new ScoreQuestion("Valora el impacto operativo respaldado por las evidencias.", ["Sin impacto material", "Molestia limitada", "Interrupción significativa para un cliente", "Interrupción generalizada o crítica del servicio"]));
     }
 
     public static async Task<DecisionReport> RunAsync(IJevClient client, DemoCase item, bool simulated, double threshold, CancellationToken ct = default)
     {
+        // C# combina respuestas, umbral y riesgo para producir una propuesta de trabajo.
         if (!double.IsFinite(threshold) || threshold < 0 || threshold > 1) throw new ArgumentOutOfRangeException(nameof(threshold));
         var clock = Stopwatch.StartNew();
         var answer = await client.EvaluateAsync(Build(item), ct);
@@ -55,18 +59,20 @@ public static class ScenarioCatalog
     }
 }
 
-/// <summary>Recorded synthetic fixtures, not an AI model or accuracy estimate.</summary>
+/// <summary>Fixtures sintéticos registrados; no son un modelo de IA ni una estimación de precisión.</summary>
 public sealed class DemoHandler(DemoCase item) : HttpMessageHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
+        // Este handler sustituye la red en simulación y devuelve respuestas deterministas.
         ct.ThrowIfCancellationRequested();
         if (request.Method == HttpMethod.Get)
-            return Reply(new { models = new[] { new { name = "jev-simulated", description = "Synthetic demonstration fixtures", release_date = "2026-09-21" } } });
+            return Reply(new { models = new[] { new { name = "jev-simulated", description = "Fixtures sintéticos de demostración", release_date = "2026-09-21" } } });
         using var body = JsonDocument.Parse(await request.Content!.ReadAsStringAsync(ct));
         var answers = new Dictionary<string, object>();
         foreach (var question in body.RootElement.GetProperty("questions").EnumerateObject())
         {
+            // Se fabrica una respuesta según el tipo de pregunta recibido.
             var q = question.Value;
             switch (q.GetProperty("type").GetString())
             {
