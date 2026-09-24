@@ -39,6 +39,8 @@ Console.WriteLine(result.Get<NoulAnswer>("refund").Noul);
 
 Consulta [guía de API y configuración](docs/usage.md), [tutorial de ejemplos](docs/examples.md) y [proceso de publicación](docs/releasing.md).
 
+La [Wiki LLM](docs/wiki/index.md) reúne conocimiento mantenible sobre el proyecto, con arquitectura, fuentes trazables e instrucciones para que los agentes actualicen y revisen la síntesis junto con el código.
+
 ## ASP.NET Core
 
 ```sh
