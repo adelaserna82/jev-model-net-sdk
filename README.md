@@ -4,14 +4,14 @@ SDK comunitario **no oficial** para decisiones tipadas con [TypeSafe Jev](https:
 
 ## Probar Laya en local
 
-Requiere .NET 10, Docker Desktop con al menos 8 GB de memoria disponible y espacio para la imagen y el modelo. En Apple Silicon el contenedor usa CPU. La primera orden construye la imagen oficial de Laya `v0.3.20`, descarga el checkpoint multilingüe en un volumen Docker y abre el servicio solo en `127.0.0.1:8000`:
+Requiere .NET 10, Docker Desktop con al menos 8 GB de memoria disponible y espacio para la imagen y el modelo. En Apple Silicon el contenedor usa CPU. El [Compose del repositorio](compose.laya.yaml) construye el Dockerfile oficial de Laya fijado al commit de `v0.3.20`: instala Python, PyTorch para CPU y el servidor HTTP dentro de la imagen. En el primer arranque descarga el checkpoint multilingüe a un volumen persistente y abre el servicio solo en `127.0.0.1:8000`:
 
 ```sh
-scripts/laya-local.sh setup
+docker compose -f compose.laya.yaml up --build -d --wait
 scripts/laya-local.sh smoke
 ```
 
-`smoke` prueba `choice`, `noul` y `score` en español, llama también al SDK .NET y reinicia el servidor con Hugging Face en modo sin conexión para verificar que los pesos permanecen. `up` inicia el servicio existente, `status` muestra su salud y `down` lo detiene **sin borrar el volumen**. El checkout oficial fijado y su commit quedan en `artifacts/`, fuera de Git. Consulta [la guía local](docs/laya-local.md).
+`scripts/laya-local.sh setup` es una alternativa que abre Docker Desktop si hace falta, guarda una copia ignorada del código oficial y registra el commit resuelto. `smoke` prueba `choice`, `noul` y `score` en español, llama también al SDK .NET y reinicia el servidor con Hugging Face en modo sin conexión para verificar que los pesos permanecen. `up` inicia el servicio existente, `status` muestra su salud y `down` lo detiene **sin borrar el volumen**. Consulta [la guía local](docs/laya-local.md).
 
 ## Utilizar la biblioteca
 

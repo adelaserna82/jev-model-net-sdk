@@ -22,3 +22,10 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 - **Fuentes:** proyectos .NET, [README](../../README.md) y configuración de CI de la rama actual.
 - **Páginas actualizadas:** índice, arquitectura y registro.
 - **Resultado:** la wiki indica cómo integrar el SDK mediante `ProjectReference`.
+
+## [2026-09-26] revisión | Compose local de Laya
+
+- **Operación:** incorporación de la configuración Docker visible en el repositorio.
+- **Fuentes:** Dockerfile oficial de Laya v0.3.20, [`compose.laya.yaml`](../../compose.laya.yaml) y prueba real con [`laya-local.sh`](../../scripts/laya-local.sh).
+- **Páginas actualizadas:** índice, arquitectura y registro.
+- **Resultado:** el Compose muestra cómo se construye y arranca `laya-serve`, dónde se guardan los pesos y qué puerto se publica.

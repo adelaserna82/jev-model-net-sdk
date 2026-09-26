@@ -16,6 +16,6 @@ flowchart LR
 
 La aplicación referencia [`TypedDecisions.Sdk.csproj`](../../src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj) directamente. Si utiliza `AddTypedDecisions`, también referencia el [proyecto de integración con DI](../../src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj). El [README](../../README.md) muestra el fragmento `ProjectReference`.
 
-El catálogo de modelos pertenece a Jev mediante [`IJevModelCatalog`](../../src/TypedDecisions.Sdk/IJevModelCatalog.cs). Laya local usa el servidor oficial fijado a `v0.3.20` y un volumen persistente, gestionados por [`laya-local.sh`](../../scripts/laya-local.sh). El SDK no ejecuta los pesos ni inicia Docker por sí mismo.
+El catálogo de modelos pertenece a Jev mediante [`IJevModelCatalog`](../../src/TypedDecisions.Sdk/IJevModelCatalog.cs). Laya local usa el Dockerfile oficial fijado al commit de `v0.3.20`, con servicio y volumen persistente visibles en [`compose.laya.yaml`](../../compose.laya.yaml). [`laya-local.sh`](../../scripts/laya-local.sh) automatiza el arranque y las pruebas. El SDK no ejecuta los pesos ni inicia Docker por sí mismo.
 
 La cancelación del llamante conserva `OperationCanceledException`; un timeout interno produce `DecisionTimeoutException`. Las respuestas preservan metadatos adicionales de Laya, como `routing` y `answer_confidence`. La validación verifica estructura, no la calidad de la predicción. Consulta [uso](../usage.md) y las [fuentes externas](sources.md).

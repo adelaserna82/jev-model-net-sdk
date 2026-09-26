@@ -4,18 +4,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UPSTREAM="$ROOT/artifacts/laya-upstream"
 TAG=v0.3.20
-EXPECTED_COMMIT_PREFIX=23a1752
+EXPECTED_COMMIT=23a17522aa4942da6cce53a995a275760320b691
 
 export COMPOSE_PROJECT_NAME=typeddecisions-laya
-export LAYA_CACHE_VOLUME=typeddecisions-laya-model-cache
-export LAYA_BIND_ADDRESS=127.0.0.1
-export LAYA_PORT=8000
-export LAYA_DEVICE=cpu
-export LAYA_TORCH_INDEX=cpu
-export LAYA_PRELOAD=1
-export LAYA_MODELS=multilingual
-export LAYA_THREADS=4
-export OMP_NUM_THREADS=4
+export LAYA_PORT="${LAYA_PORT:-8000}"
 export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-0}"
 
 usage() {
@@ -30,8 +22,8 @@ ensure_checkout() {
   fi
   local commit
   commit="$(git -C "$UPSTREAM" rev-parse HEAD)"
-  if [[ "$commit" != "$EXPECTED_COMMIT_PREFIX"* ]]; then
-    echo "El checkout de Laya no coincide con $TAG ($EXPECTED_COMMIT_PREFIX): $commit" >&2
+  if [[ "$commit" != "$EXPECTED_COMMIT" ]]; then
+    echo "El checkout de Laya no coincide con $TAG ($EXPECTED_COMMIT): $commit" >&2
     exit 1
   fi
   printf '%s\n' "$commit" > "$ROOT/artifacts/laya-upstream-commit.txt"
@@ -51,7 +43,7 @@ ensure_docker() {
 }
 
 compose() {
-  (cd "$UPSTREAM" && docker compose -f compose.yaml -f compose.http.yaml "$@")
+  docker compose -f "$ROOT/compose.laya.yaml" "$@"
 }
 
 health() {
@@ -90,7 +82,7 @@ case "${1:-}" in
     curl --fail --silent --show-error "http://127.0.0.1:$LAYA_PORT/v1/systemone" \
       -H 'content-type: application/json' \
       --data-binary @"$ROOT/scripts/laya-smoke.json" \
-      | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["routing"]["model"] == "multilingual", r; a=r["answers"]; assert a["route"]["type"] == "choice" and a["risk"]["type"] == "noul" and a["impact"]["type"] == "score", r; assert "usage" in r; print("Laya HTTP OK:", r["model"], r["routing"]["model"])'
+      | compose exec -T laya-serve python -c 'import json,sys; r=json.load(sys.stdin); assert r["routing"]["model"] == "multilingual", r; a=r["answers"]; assert a["route"]["type"] == "choice" and a["risk"]["type"] == "noul" and a["impact"]["type"] == "score", r; assert "usage" in r; print("Laya HTTP OK:", r["model"], r["routing"]["model"])'
     dotnet run --project "$ROOT/samples/TypedDecisions.Console" -- support --laya --no-color
     export HF_HUB_OFFLINE=1
     compose up -d --force-recreate --wait laya-serve
@@ -98,7 +90,7 @@ case "${1:-}" in
     curl --fail --silent --show-error "http://127.0.0.1:$LAYA_PORT/v1/systemone" \
       -H 'content-type: application/json' \
       --data-binary @"$ROOT/scripts/laya-smoke.json" \
-      | python3 -c 'import json,sys; r=json.load(sys.stdin); assert r["routing"]["model"] == "multilingual"; print("Laya sin red OK:", r["model"])'
+      | compose exec -T laya-serve python -c 'import json,sys; r=json.load(sys.stdin); assert r["routing"]["model"] == "multilingual"; print("Laya sin red OK:", r["model"])'
     ;;
   *) usage ;;
 esac
