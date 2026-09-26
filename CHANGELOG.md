@@ -6,6 +6,7 @@
 - Perfiles independientes de autenticación, modelo, URL y reintentos; catálogo de modelos solo para Jev.
 - Entorno Docker local de Laya v0.3.20 con checkpoint multilingüe persistente y prueba sin conexión.
 - Muestras y telemetría actualizadas; sin umbral de confianza predeterminado.
+- Distribución solo como código fuente; sin paquetes NuGet de TypedDecisions.NET.
 
 ## 0.2.0
 

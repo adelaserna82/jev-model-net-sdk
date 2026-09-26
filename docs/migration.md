@@ -1,6 +1,6 @@
 # Migración desde Jev.Sdk 0.2.0
 
-TypedDecisions.NET 0.3.0 cambia el nombre y la API pública directamente. Sustituye los paquetes `Jev.Sdk` por `TypedDecisions.Sdk` y, si usas DI, la extensión correspondiente. Cambia `using Jev.Sdk` por `using TypedDecisions.Sdk`.
+TypedDecisions.NET 0.3.0 cambia el nombre y la API pública directamente. Elimina las referencias anteriores a `Jev.Sdk` y añade una referencia de proyecto a `src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj`. Si usas DI, referencia también `src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj`. Cambia `using Jev.Sdk` por `using TypedDecisions.Sdk`. TypedDecisions.NET se distribuye solo como código fuente; no se publica en NuGet.
 
 | Antes | Ahora |
 | --- | --- |

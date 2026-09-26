@@ -1,10 +1,14 @@
-# GitHub y NuGet
+# Mantenimiento del repositorio
 
-GitHub contiene fuentes, documentación e historial; NuGet distribuye los paquetes compilados. El código es MIT y los pesos de Laya se distribuyen por separado bajo Apache 2.0. Los paquetes deben identificarse como no oficiales.
+TypedDecisions.NET se distribuye únicamente como código fuente bajo la licencia MIT. No se generan ni publican paquetes NuGet propios. Los proyectos siguen usando dependencias de Microsoft y de pruebas obtenidas de NuGet durante la restauración normal de .NET. Los pesos de Laya se descargan por separado al volumen Docker y no forman parte del repositorio.
 
-1. Verifica en NuGet que `TypedDecisions.Sdk` y `TypedDecisions.Sdk.Extensions.DependencyInjection` siguen disponibles. El 2026-09-26 ambos devolvían 404 en el índice público; esto no reserva los nombres. Si alguno se ocupa, usa `Adelaserna.TypedDecisions.Sdk` y el mismo prefijo para DI, actualizando ensamblados, pruebas y documentación antes del tag.
-2. Actualiza Version en Directory.Build.props y CHANGELOG. Ejecuta las pruebas y revisa los paquetes.
-3. Una vez renombrado el repositorio remoto a `typed-decisions-net`, actualiza `origin`. Crea y publica el tag `v0.3.0` en GitHub. El workflow Release compila, prueba, empaqueta y crea una release con los dos paquetes.
-4. Para subir a NuGet, ejecuta manualmente Release indicando el tag y publishNuget=true. Configura el entorno protegido `nuget` y el secreto `NUGET_API_KEY` con permiso limitado a estos paquetes; añade aprobación manual al entorno.
+Para integrar el SDK en otra aplicación, clona el repositorio y añade una referencia a `src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj`. Añade también el proyecto `src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj` si usas `AddTypedDecisions`. Consulta el ejemplo de `ProjectReference` del [README](../README.md).
 
-El workflow comprueba que el tag coincide con la versión de los paquetes. La publicación a NuGet requiere el entorno `nuget` y `NUGET_API_KEY`; no se activa por un simple push. Nunca reutilices una versión publicada con otro contenido. Los pesos de Laya permanecen en Hugging Face y no forman parte de los NuGet.
+Antes de publicar cambios de código en la rama principal:
+
+1. Ejecuta `dotnet test TypedDecisions.slnx -c Release` y `dotnet build TypedDecisions.slnx -c Release`.
+2. Ejecuta `scripts/laya-local.sh smoke` si cambias el contrato HTTP o la integración con Laya.
+3. Actualiza `CHANGELOG.md` y la guía de migración cuando cambie la API pública.
+4. Revisa el resultado de CI en Ubuntu y Windows. El workflow solo compila, prueba y ejecuta la simulación; no empaqueta el SDK.
+
+El nombre objetivo del repositorio GitHub es `typed-decisions-net`. Tras cambiarlo en GitHub, actualiza la URL de `origin` y comprueba que la rama y las etiquetas existentes siguen accesibles. Un tag de Git puede identificar una versión del código fuente, pero no activa ningún flujo de publicación de paquetes.

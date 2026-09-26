@@ -15,6 +15,18 @@ scripts/laya-local.sh smoke
 
 ## Utilizar la biblioteca
 
+El proyecto se distribuye **solo como código fuente**. Clona el repositorio y referencia `src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj` desde tu solución. Si utilizas inyección de dependencias, referencia también `src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj`. Los ejemplos del repositorio ya muestran ambas modalidades. No se publican paquetes NuGet de TypedDecisions.NET.
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="../typed-decisions-net/src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj" />
+  <!-- Solo si utilizas AddTypedDecisions: -->
+  <ProjectReference Include="../typed-decisions-net/src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj" />
+</ItemGroup>
+```
+
+Ajusta las rutas según la ubicación de tu aplicación y del repositorio clonado.
+
 ```csharp
 using TypedDecisions.Sdk;
 
@@ -63,10 +75,9 @@ builder.Services.AddTypedDecisions(options =>
 
 ```sh
 dotnet test TypedDecisions.slnx -c Release
-dotnet pack src/TypedDecisions.Sdk -c Release -o artifacts/packages
-dotnet pack src/TypedDecisions.Sdk.Extensions.DependencyInjection -c Release -o artifacts/packages
+dotnet build TypedDecisions.slnx -c Release
 ```
 
 Las pruebas de Jev que consumen la API real están omitidas por defecto; requieren `JEV_RUN_LIVE_TESTS=1` y una clave. La integración local real con Laya se comprueba mediante `scripts/laya-local.sh smoke`.
 
-Consulta [publicación](docs/releasing.md), [migración desde Jev.Sdk](docs/migration.md) y la [wiki técnica](docs/wiki/index.md). Las pruebas de contrato locales no sustituyen una evaluación de calidad con datos propios.
+Consulta [mantenimiento del repositorio](docs/releasing.md), [migración desde Jev.Sdk](docs/migration.md) y la [wiki técnica](docs/wiki/index.md). Las pruebas de contrato locales no sustituyen una evaluación de calidad con datos propios.
