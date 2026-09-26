@@ -36,3 +36,10 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 - **Fuentes:** [`compose.laya.yaml`](../../compose.laya.yaml), [petición de prueba](../../tests/fixtures/laya-smoke.json) y [guía local](../laya-local.md).
 - **Páginas actualizadas:** índice, arquitectura y registro.
 - **Resultado:** arranque, prueba HTTP y parada se realizan con Docker Compose en Windows, Linux y macOS.
+
+## [2026-09-26] ampliación | Ejemplos de uso en la wiki
+
+- **Operación:** incorporación de peticiones .NET breves que muestran las tres preguntas, la selección de proveedor y modelo, y el registro con DI.
+- **Fuentes:** [`DecisionRequest`](../../src/TypedDecisions.Sdk/DecisionRequest.cs), [`DecisionClient`](../../src/TypedDecisions.Sdk/DecisionClient.cs), [preguntas](../../src/TypedDecisions.Sdk/Questions.cs) y [muestras](../examples.md) de la rama actual.
+- **Páginas actualizadas:** índice, nueva página de ejemplos de uso y registro.
+- **Resultado:** la wiki muestra código de uso directo y enlaza las muestras completas sin duplicarlas.
