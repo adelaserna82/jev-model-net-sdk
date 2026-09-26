@@ -11,5 +11,6 @@ Este catálogo registra fuentes externas para Jev y Laya. Las fuentes locales ca
 | [Compose HTTP oficial de Laya](https://github.com/NandhaKishorM/laya/blob/v0.3.20/compose.http.yaml) | Puerto, salud, precarga y caché | 2026-09-26 | Entorno local reproducible. |
 | [Guía Docker de Laya](https://nandhakishorm.github.io/laya/docker/) | Requisitos y comportamiento en Docker | 2026-09-26 | Guía de instalación local. |
 | [Pesos de Laya](https://huggingface.co/convaiinnovations/laya) | Checkpoints y licencia | 2026-09-26 | Identificación del checkpoint multilingüe. |
+| [Microsoft Learn: User Secrets en ASP.NET Core 10](https://learn.microsoft.com/es-es/aspnet/core/security/app-secrets?view=aspnetcore-10.0) | Almacenamiento local de claves de desarrollo | 2026-09-26 | Configuración de la clave Jev fuera de `appsettings.json`. |
 
 La fecha refleja lo indicado por la documentación actual del repositorio; no implica que esta sesión haya vuelto a verificar cada fuente externa. Al revisar una fuente, actualiza la fecha y registra el cambio en [log.md](log.md). Conserva una copia en `sources/` solo si una síntesis importante depende de contenido mutable que ya no pueda identificarse de forma suficiente mediante URL, versión y fecha; respeta licencia y derechos de autor.

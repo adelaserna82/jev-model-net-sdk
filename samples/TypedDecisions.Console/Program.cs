@@ -12,7 +12,10 @@ var interactive = args.All(a => a.StartsWith("--", StringComparison.Ordinal)) ||
 var simulated = interactive || args.Contains("--simulate");
 var color = !Console.IsOutputRedirected && Environment.GetEnvironmentVariable("NO_COLOR") is null && !args.Contains("--no-color");
 // User Secrets permite guardar la clave sin introducirla en el repositorio.
-var config = new ConfigurationBuilder().AddUserSecrets<SecretMarker>().Build();
+var config = new ConfigurationBuilder()
+    .AddJsonFile(Path.Combine(AppContext.BaseDirectory, "appsettings.json"), optional: true)
+    .AddUserSecrets<SecretMarker>()
+    .Build();
 double? threshold = null;
 var provider = args.Contains("--laya") ? DecisionProvider.Laya : DecisionProvider.Jev;
 var reports = new List<DecisionReport>();
@@ -69,8 +72,10 @@ void Render(DecisionReport report)
 DecisionClientOptions Options()
 {
     var options = new DecisionClientOptions();
-    options.Jev.ApiKey = simulated ? "simulation-only" : config["Jev:ApiKey"];
-    options.Laya.Model = "multilingual";
+    config.GetSection("TypedDecisions").Bind(options);
+    options.Jev.ApiKey ??= config["Jev:ApiKey"]; // Compatibilidad con el secreto anterior de la muestra.
+    options.Laya.Model ??= "multilingual";
+    if (simulated) options.Jev.ApiKey = "simulation-only";
     return options;
 }
 async Task<DecisionReport> Evaluate(DemoCase item, CancellationToken ct)
@@ -168,8 +173,8 @@ try
                     case "6":
                         if (simulated)
                         {
-                            if (provider == DecisionProvider.Jev && string.IsNullOrWhiteSpace(config["Jev:ApiKey"] ?? Environment.GetEnvironmentVariable("TYPESAFE_API_KEY")))
-                                Line("  Configura TYPESAFE_API_KEY o User Secrets Jev:ApiKey y vuelve a abrir el programa.", ConsoleColor.Yellow);
+                            if (provider == DecisionProvider.Jev && string.IsNullOrWhiteSpace(config["TypedDecisions:Jev:ApiKey"] ?? config["Jev:ApiKey"] ?? Environment.GetEnvironmentVariable("TYPESAFE_API_KEY")))
+                                Line("  Configura TYPESAFE_API_KEY o User Secrets TypedDecisions:Jev:ApiKey y vuelve a abrir el programa.", ConsoleColor.Yellow);
                             else { Line($"  Las próximas evaluaciones usarán {provider}. Escribe REAL para activar:"); simulated = Console.ReadLine() != "REAL"; }
                         }
                         else simulated = true;

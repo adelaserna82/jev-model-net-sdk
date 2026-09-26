@@ -55,16 +55,12 @@ Console.WriteLine(jevResponse.Get<NoulAnswer>("urgente").Noul);
 
 El cliente solo envía la clave de TypeSafe a Jev; Laya admite una clave local independiente y opcional. Si omites `Model`, se usa el modelo configurado para ese proveedor. Jev usa `jev-latest` por defecto; Laya permite enrutamiento automático, que podría descargar otro checkpoint. Consulta las [opciones](../usage.md#opciones) y las [pruebas de aislamiento](../../tests/TypedDecisions.Sdk.Tests/ProviderTests.cs).
 
-## Inyección de dependencias
+## Configuración e inyección de dependencias
 
-Con una referencia adicional al proyecto `TypedDecisions.Sdk.Extensions.DependencyInjection.csproj` puedes registrar ambos proveedores en ASP.NET Core:
+Con una referencia adicional al proyecto `TypedDecisions.Sdk.Extensions.DependencyInjection.csproj`, guarda las URL y modelos en la sección `TypedDecisions` de [appsettings.json](../../samples/TypedDecisions.Web/appsettings.json). Después registra ambos proveedores en ASP.NET Core:
 
 ```csharp
-builder.Services.AddTypedDecisions(options =>
-{
-    options.Laya.Model = "multilingual";
-    options.Jev.ApiKey = builder.Configuration["Jev:ApiKey"];
-});
+builder.Services.AddTypedDecisions(builder.Configuration.GetSection("TypedDecisions"));
 ```
 
-Inyecta `IDecisionClient` y sigue indicando `DecisionProvider` en **cada** petición. Para una aplicación completa, consulta las [muestras de consola y web](../examples.md).
+El archivo versionado contiene `Jev.BaseUrl` y `Laya.BaseUrl`, pero no la clave. Para Jev, usa `TYPESAFE_API_KEY` o guarda `TypedDecisions:Jev:ApiKey` en [User Secrets](https://learn.microsoft.com/es-es/aspnet/core/security/app-secrets?view=aspnetcore-10.0) durante el desarrollo. Inyecta `IDecisionClient` y sigue indicando `DecisionProvider` en **cada** petición. Consulta la [guía de configuración](../usage.md#appsettingsjson-y-clave-de-jev) y las [muestras completas](../examples.md).

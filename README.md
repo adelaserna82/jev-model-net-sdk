@@ -42,6 +42,14 @@ Console.WriteLine(response.Get<NoulAnswer>("refund").Noul);
 
 Para Jev, usa `DecisionProvider.Jev` y configura `TYPESAFE_API_KEY` o `options.Jev.ApiKey`. El cliente puede atender solicitudes de ambos proveedores en la misma instancia. Jev usa `jev-latest` por defecto; Laya enruta automáticamente si no se fija un checkpoint. El catálogo de modelos de TypeSafe está en `IJevModelCatalog.ListJevModelsAsync()`, fuera de la interfaz común.
 
+Las URL y los modelos también pueden estar en `appsettings.json`, como en las [muestras web](samples/TypedDecisions.Web/appsettings.json) y de [consola](samples/TypedDecisions.Console/appsettings.json). El archivo no contiene claves. En ASP.NET Core registra su sección:
+
+```csharp
+builder.Services.AddTypedDecisions(builder.Configuration.GetSection("TypedDecisions"));
+```
+
+Para Jev, configura la clave con `TYPESAFE_API_KEY` o, con la muestra web en entorno `Development`, con `dotnet user-secrets set "TypedDecisions:Jev:ApiKey" "<tu-clave>" --project samples/TypedDecisions.Web`. El SDK toma esa clave solo para peticiones Jev. Consulta [configuración detallada](docs/usage.md#appsettingsjson-y-clave-de-jev).
+
 `ChoiceQuestion.FromEnum<T>()` y `ChoiceAnswer.AsEnum<T>()` facilitan usar enumeraciones. `DecisionContent.From(...)` admite estados estructurados y una sobrecarga con `JsonTypeInfo<T>`. La confianza no garantiza acierto: las fórmulas de Jev y Laya difieren y las muestras **no aplican un umbral por defecto**. Consulta [API y configuración](docs/usage.md).
 
 ## Ejemplos
@@ -60,16 +68,7 @@ dotnet run --project samples/TypedDecisions.Console -- support --laya
 
 El [tutorial](docs/examples.md) explica la consola y la muestra web, incluida la selección de proveedor en cada petición. Los ejemplos no ejecutan reembolsos ni cambios en sistemas.
 
-Registro en ASP.NET Core:
-
-```csharp
-builder.Services.AddTypedDecisions(options =>
-{
-    options.Jev.ApiKey = builder.Configuration["Jev:ApiKey"];
-    options.Laya.Model = "multilingual";
-});
-// Inyectar IDecisionClient e indicar DecisionProvider en cada DecisionRequest.
-```
+En ASP.NET Core, inyecta `IDecisionClient` e indica `DecisionProvider` en cada `DecisionRequest`.
 
 ## Compilar y verificar
 

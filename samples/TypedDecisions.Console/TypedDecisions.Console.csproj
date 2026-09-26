@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable><UserSecretsId>typed-decisions-console-examples</UserSecretsId></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../TypedDecisions.Scenarios/TypedDecisions.Scenarios.csproj" /><PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../TypedDecisions.Scenarios/TypedDecisions.Scenarios.csproj" /><PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" /><PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" /></ItemGroup>
+  <ItemGroup><None Update="appsettings.json" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

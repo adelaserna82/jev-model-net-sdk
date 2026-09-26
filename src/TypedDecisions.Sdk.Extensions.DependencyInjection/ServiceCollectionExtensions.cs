@@ -1,10 +1,18 @@
 using TypedDecisions.Sdk;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DecisionServiceCollectionExtensions
 {
+    /// <summary>Registers a client using a configuration section, such as TypedDecisions in appsettings.json.</summary>
+    public static IServiceCollection AddTypedDecisions(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return services.AddTypedDecisions(options => configuration.Bind(options));
+    }
+
     /// <summary>Registers a client for per-request Jev and Laya evaluations.</summary>
     public static IServiceCollection AddTypedDecisions(this IServiceCollection services, Action<DecisionClientOptions>? configure = null)
     {

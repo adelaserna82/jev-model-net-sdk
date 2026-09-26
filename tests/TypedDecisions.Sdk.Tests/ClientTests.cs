@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text.Json;
 using TypedDecisions.Sdk;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace TypedDecisions.Sdk.Tests;
@@ -110,6 +112,30 @@ public sealed class ClientTests
         using var services = new ServiceCollection().AddTypedDecisions(o => o.Jev.ApiKey = "test").BuildServiceProvider();
         Assert.IsType<DecisionClient>(services.GetRequiredService<IDecisionClient>());
         Assert.IsType<DecisionClient>(services.GetRequiredService<IJevModelCatalog>());
+    }
+    [Fact] public void ConfigurationSectionBindsBothProviderProfiles()
+    {
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["TypedDecisions:Jev:BaseUrl"] = "https://jev.example.test/",
+            ["TypedDecisions:Jev:ApiKey"] = "jev-secret",
+            ["TypedDecisions:Jev:Model"] = "jev-latest",
+            ["TypedDecisions:Laya:BaseUrl"] = "http://127.0.0.1:8123/",
+            ["TypedDecisions:Laya:Model"] = "multilingual",
+            ["TypedDecisions:Timeout"] = "00:00:45"
+        }).Build();
+
+        using var services = new ServiceCollection()
+            .AddTypedDecisions(configuration.GetSection("TypedDecisions"))
+            .BuildServiceProvider();
+        var options = services.GetRequiredService<IOptions<DecisionClientOptions>>().Value;
+        Assert.Equal(new Uri("https://jev.example.test/"), options.Jev.BaseUrl);
+        Assert.Equal("jev-secret", options.Jev.ApiKey);
+        Assert.Equal("jev-latest", options.Jev.Model);
+        Assert.Equal(new Uri("http://127.0.0.1:8123/"), options.Laya.BaseUrl);
+        Assert.Equal("multilingual", options.Laya.Model);
+        Assert.Equal(TimeSpan.FromSeconds(45), options.Timeout);
+        Assert.IsType<DecisionClient>(services.GetRequiredService<IDecisionClient>());
     }
     // Choice y Score deben serializarse y deserializarse como respuestas polimórficas.
     [Fact] public async Task StructuredChoiceAndScore()

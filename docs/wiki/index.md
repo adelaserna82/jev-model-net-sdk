@@ -4,7 +4,7 @@ Síntesis mantenible del SDK comunitario no oficial para Jev y Laya. Se integra 
 
 ## Rutas de lectura
 
-- [Ejemplos de uso](ejemplos-de-uso.md): peticiones tipadas a Laya y Jev, modelo por petición y DI.
+- [Ejemplos de uso](ejemplos-de-uso.md): peticiones tipadas a Laya y Jev, modelo por petición y configuración con DI.
 - [README](../../README.md): inicio rápido y API pública.
 - [Uso](../usage.md): configuración, respuestas, errores y telemetría.
 - [Laya local](../laya-local.md): Docker, checkpoint multilingüe y prueba sin conexión.

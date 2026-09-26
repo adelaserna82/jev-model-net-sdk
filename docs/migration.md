@@ -15,6 +15,6 @@ TypedDecisions.NET 0.3.0 cambia el nombre y la API pública directamente. Elimin
 
 Las excepciones `Jev*Exception` pasan a `Decision*Exception`. La telemetría cambia de `Jev.Sdk` y `jev.request.*` a `TypedDecisions.Sdk` y `decisions.request.*` con etiqueta de proveedor. Actualiza listeners, alertas y paneles. Los casos sin umbral calibrado se envían a revisión humana en las muestras.
 
-Los proyectos de ejemplo usan nuevos identificadores de User Secrets. Si guardaste `Jev:ApiKey` para las muestras anteriores, vuelve a configurarlo en el proyecto renombrado o usa `TYPESAFE_API_KEY`.
+Los proyectos de ejemplo usan nuevos identificadores de User Secrets y leen las URL/modelos de `TypedDecisions` en `appsettings.json`. Si guardaste `Jev:ApiKey` para las muestras anteriores, vuelve a configurarlo como `TypedDecisions:Jev:ApiKey` en el proyecto renombrado o usa `TYPESAFE_API_KEY`. La consola conserva compatibilidad con `Jev:ApiKey` dentro de su propio almacén de secretos.
 
 Para Laya, crea la misma petición con `DecisionProvider.Laya`, arranca el [servidor local](laya-local.md) y fija `options.Laya.Model = "multilingual"` para usar el checkpoint descargado. No reutilices claves ni umbrales de confianza de Jev.

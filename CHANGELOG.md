@@ -3,6 +3,7 @@
 ## 0.3.0
 
 - SDK renombrado a TypedDecisions.NET con selección de Jev o Laya en cada petición.
+- Configuración de URL y modelo por proveedor desde `appsettings.json` mediante DI; clave Jev en entorno o User Secrets.
 - Perfiles independientes de autenticación, modelo, URL y reintentos; catálogo de modelos solo para Jev.
 - Entorno Docker local de Laya v0.3.20 con checkpoint multilingüe persistente y prueba sin conexión.
 - Compose local para construir el Dockerfile oficial, arrancar Laya y ejecutar la prueba HTTP en Windows, Linux y macOS.

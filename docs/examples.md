@@ -17,7 +17,7 @@ docker compose -f compose.laya.yaml up --build -d --wait
 dotnet run --project samples/TypedDecisions.Console -- support --laya
 ```
 
-Para Jev real, configura `TYPESAFE_API_KEY` o el secreto `Jev:ApiKey` y omite `--laya`. Una llamada Jev puede consumir saldo. Añade `--simulate` para usar fixtures. Los casos son `support`, `returns` e `incident`; también existen `batch`, `models`, `noul`, `choice`, `score`, `mixed`, `routing` y `cancel`.
+Para Jev real, configura `TYPESAFE_API_KEY` o el secreto `TypedDecisions:Jev:ApiKey` y omite `--laya`. Una llamada Jev puede consumir saldo. Las URL y los modelos están en [appsettings.json](../samples/TypedDecisions.Console/appsettings.json). Añade `--simulate` para usar fixtures. Los casos son `support`, `returns` e `incident`; también existen `batch`, `models`, `noul`, `choice`, `score`, `mixed`, `routing` y `cancel`.
 
 ## ASP.NET Core
 
@@ -25,14 +25,14 @@ Para Jev real, configura `TYPESAFE_API_KEY` o el secreto `Jev:ApiKey` y omite `-
 dotnet run --project samples/TypedDecisions.Web -- --urls http://localhost:5080
 ```
 
-El ejemplo web comienza en simulación. **Cada petición** indica `provider=Jev` o `provider=Laya`:
+El ejemplo web comienza en simulación. Sus URL y modelos se leen de [appsettings.json](../samples/TypedDecisions.Web/appsettings.json); la clave Jev puede venir de `TYPESAFE_API_KEY` o, en entorno `Development`, del secreto `TypedDecisions:Jev:ApiKey`. **Cada petición** indica `provider=Jev` o `provider=Laya`:
 
 - `GET /cases` muestra los tres expedientes.
 - `POST /cases/support/evaluate?provider=Laya` devuelve una evaluación sin umbral automático.
 - `POST /cases/batch?provider=Jev&threshold=0.8` muestra cómo se aplica un umbral explícito.
 - `POST /evaluate?provider=Laya` acepta un cuerpo JSON como `{ "text": "..." }` en modo real.
 
-Abre [requests.http](../samples/TypedDecisions.Web/requests.http) para probarlos. Para desactivar la simulación, configura `Demo:Simulated=false` en User Secrets. El ejemplo web no tiene autenticación de usuarios ni límites de solicitudes; mantenlo local.
+Abre [requests.http](../samples/TypedDecisions.Web/requests.http) para probarlos. Para desactivar la simulación, usa la variable de entorno `Demo__Simulated=false` o, en entorno `Development`, el secreto `Demo:Simulated=false`. El ejemplo web no tiene autenticación de usuarios ni límites de solicitudes; mantenlo local.
 
 ## Antes de automatizar una decisión
 

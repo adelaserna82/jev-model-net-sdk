@@ -2,13 +2,7 @@ using TypedDecisions.Sdk;
 using TypedDecisions.Scenarios;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddTypedDecisions(options =>
-{
-    options.Jev.ApiKey = builder.Configuration["Jev:ApiKey"];
-    options.Jev.Model = builder.Configuration["Jev:Model"];
-    options.Laya.ApiKey = builder.Configuration["Laya:ApiKey"];
-    options.Laya.Model = builder.Configuration["Laya:Model"] ?? "multilingual";
-});
+builder.Services.AddTypedDecisions(builder.Configuration.GetSection("TypedDecisions"));
 var app = builder.Build();
 var simulated = builder.Configuration.GetValue("Demo:Simulated", true);
 

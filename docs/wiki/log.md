@@ -43,3 +43,10 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 - **Fuentes:** [`DecisionRequest`](../../src/TypedDecisions.Sdk/DecisionRequest.cs), [`DecisionClient`](../../src/TypedDecisions.Sdk/DecisionClient.cs), [preguntas](../../src/TypedDecisions.Sdk/Questions.cs) y [muestras](../examples.md) de la rama actual.
 - **Páginas actualizadas:** índice, nueva página de ejemplos de uso y registro.
 - **Resultado:** la wiki muestra código de uso directo y enlaza las muestras completas sin duplicarlas.
+
+## [2026-09-26] revisión | Configuración de URL y clave Jev
+
+- **Operación:** actualización de los ejemplos de la wiki para mostrar configuración desde `appsettings.json` y gestión separada de la clave Jev.
+- **Fuentes:** [extensión DI](../../src/TypedDecisions.Sdk.Extensions.DependencyInjection/ServiceCollectionExtensions.cs), [configuración de la muestra web](../../samples/TypedDecisions.Web/appsettings.json), [guía de uso](../usage.md) y [Microsoft Learn sobre User Secrets](https://learn.microsoft.com/es-es/aspnet/core/security/app-secrets?view=aspnetcore-10.0).
+- **Páginas actualizadas:** ejemplos de uso, índice, catálogo de fuentes y registro.
+- **Resultado:** se distinguen URL y modelos versionados de la clave Jev guardada fuera de Git.

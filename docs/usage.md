@@ -15,6 +15,35 @@ La respuesta indica `Provider`, `Model`, `Answers`, `Usage`, `Headers` y campos 
 
 `DecisionClientOptions.Timeout` vale 60 segundos por operación. Las opciones explícitas prevalecen sobre el entorno. Un `ApiKey` explícito vacío desactiva el uso de la variable del entorno correspondiente. `DecisionRequest.Model` prevalece sobre el perfil. Para Laya se aceptan los identificadores explícitos `english`, `multilingual` y `typed-decisions`; `null` deja decidir al router. La muestra local fija `multilingual` para usar solo el checkpoint descargado.
 
+## `appsettings.json` y clave de Jev
+
+En una aplicación con DI, guarda URL y modelo por proveedor en una sección `TypedDecisions`:
+
+```json
+{
+  "TypedDecisions": {
+    "Jev": { "BaseUrl": "https://api.typesafe.ai/", "Model": "jev-latest" },
+    "Laya": { "BaseUrl": "http://127.0.0.1:8000/", "Model": "multilingual" }
+  }
+}
+```
+
+```csharp
+builder.Services.AddTypedDecisions(builder.Configuration.GetSection("TypedDecisions"));
+```
+
+Sin DI, puedes enlazar la misma sección con `configuration.GetSection("TypedDecisions").Bind(options)` antes de crear `new DecisionClient(options)`, como hace la consola. La URL es la raíz de la API; el cliente añade `v1/systemone`. Las muestras [web](../samples/TypedDecisions.Web/appsettings.json) y de [consola](../samples/TypedDecisions.Console/appsettings.json) incluyen esos valores. Se puede seguir configurando cada URL mediante `TYPESAFE_BASE_URL` y `LAYA_BASE_URL` cuando no haya un valor en las opciones.
+
+La clave Jev es obligatoria al llamar a Jev. Usa `TYPESAFE_API_KEY` como variable de entorno, o guarda `TypedDecisions:Jev:ApiKey` en User Secrets durante el desarrollo:
+
+```sh
+dotnet user-secrets set "TypedDecisions:Jev:ApiKey" "<tu-clave>" --project samples/TypedDecisions.Web
+```
+
+Para la consola, cambia la ruta del proyecto a `samples/TypedDecisions.Console`. En código también puedes asignar `options.Jev.ApiKey`. No incluyas la clave en el `appsettings.json` versionado. Laya puede tener una clave local independiente en `TypedDecisions:Laya:ApiKey` o `LAYA_API_KEY`; ninguna petición Laya recibe la clave Jev.
+
+La muestra web carga User Secrets mediante la configuración predeterminada de ASP.NET Core cuando el entorno es `Development`; en otros entornos usa `TYPESAFE_API_KEY` u otro almacén de secretos configurado. La muestra de consola carga su User Secrets de forma explícita. Consulta la [guía de Microsoft](https://learn.microsoft.com/es-es/aspnet/core/security/app-secrets?view=aspnetcore-10.0).
+
 Las URL deben ser HTTPS, salvo HTTP en loopback. No se siguen redirecciones en el cliente creado por el SDK y DI. Si aportas tu propio `HttpClient`, su handler y timeout pueden imponer límites diferentes y siguen siendo responsabilidad del llamante. Las claves se añaden a cada mensaje del proveedor correspondiente, no como cabecera global del cliente HTTP.
 
 Las opciones de Jev permiten hasta 255 alternativas Choice y 2–10 niveles Score. Para Laya, el SDK limita 64 preguntas, 100 alternativas por Choice y 512 opciones totales; los propios checkpoints tienen además un presupuesto de tokens por pregunta. Una respuesta puede ser rechazada por el servidor aunque respete los límites numéricos.
