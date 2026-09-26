@@ -8,3 +8,10 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 - **Fuentes:** código y documentación versionados del repositorio; el catálogo externo conserva las fechas ya declaradas en el README.
 - **Páginas actualizadas:** índice, arquitectura, reglas de mantenimiento y catálogo de fuentes.
 - **Resultado:** se establecieron los flujos de ingesta, consulta y revisión; no se archivaron copias externas.
+
+## [2026-09-26] evolución | TypedDecisions.NET y Laya local
+
+- **Operación:** revisión de la arquitectura y de las rutas de lectura tras el cambio de API y la incorporación de Laya.
+- **Fuentes:** código y pruebas de esta rama; TypeSafe API y Laya v0.3.20, Compose y guía Docker oficiales.
+- **Páginas actualizadas:** índice, arquitectura, fuentes y registro.
+- **Resultado:** se documentó la elección por petición, el catálogo exclusivo de Jev y el contenedor local con checkpoint multilingüe.

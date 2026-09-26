@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup><IsPackable>false</IsPackable><UserSecretsId>typed-decisions-web-example</UserSecretsId></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj" /><ProjectReference Include="../TypedDecisions.Scenarios/TypedDecisions.Scenarios.csproj" /></ItemGroup>
+</Project>

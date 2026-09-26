@@ -1,0 +1,21 @@
+@host = http://localhost:5080
+### Examinar los datos de los tres casos
+GET {{host}}/cases
+
+### Facturación
+POST {{host}}/cases/support/evaluate?provider=Laya
+
+### Caso ambiguo: umbral Jev explícito
+POST {{host}}/cases/returns/evaluate?provider=Jev&threshold=0.5
+
+### Incidencia crítica
+POST {{host}}/cases/incident/evaluate?provider=Laya
+
+### Lote con resumen
+POST {{host}}/cases/batch?provider=Jev&threshold=0.8
+
+### Texto propio: requiere Demo:Simulated=false; Laya local no exige clave
+POST {{host}}/evaluate?provider=Laya
+Content-Type: application/json
+
+{"text":"I was charged twice. Please help today."}

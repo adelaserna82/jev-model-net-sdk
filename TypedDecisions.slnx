@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="samples/TypedDecisions.Scenarios/TypedDecisions.Scenarios.csproj" />
+  <Project Path="src/TypedDecisions.Sdk/TypedDecisions.Sdk.csproj" />
+  <Project Path="src/TypedDecisions.Sdk.Extensions.DependencyInjection/TypedDecisions.Sdk.Extensions.DependencyInjection.csproj" />
+  <Project Path="tests/TypedDecisions.Sdk.Tests/TypedDecisions.Sdk.Tests.csproj" />
+  <Project Path="samples/TypedDecisions.Console/TypedDecisions.Console.csproj" />
+  <Project Path="samples/TypedDecisions.Web/TypedDecisions.Web.csproj" />
+</Solution>

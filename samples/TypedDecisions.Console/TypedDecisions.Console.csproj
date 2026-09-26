@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable><UserSecretsId>typed-decisions-console-examples</UserSecretsId></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../TypedDecisions.Scenarios/TypedDecisions.Scenarios.csproj" /><PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" /></ItemGroup>
+</Project>

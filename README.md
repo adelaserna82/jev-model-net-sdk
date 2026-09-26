@@ -1,85 +1,72 @@
-# Jev SDK para .NET 10
+# TypedDecisions.NET
 
-SDK comunitario **no oficial** para [TypeSafe AI Jev](https://typesafe.ai/). Licencia MIT. Jev evalúa decisiones tipadas; no es una API de chat. Este proyecto no está afiliado a TypeSafe.
+SDK comunitario **no oficial** para decisiones tipadas con [TypeSafe Jev](https://docs.typesafe.ai/api) y [Laya](https://github.com/NandhaKishorM/laya). Una petición elige el proveedor y formula preguntas `noul`, `choice` o `score`; la respuesta incluye probabilidades y metadatos. No es una API de chat ni está afiliado a TypeSafe o Convai Innovations. Código MIT; los pesos de Laya tienen su propia licencia Apache 2.0.
 
-## Probar en un minuto
+## Probar Laya en local
 
-Requiere .NET SDK 10. Desde la raíz:
-
-```sh
-dotnet run --project samples/Jev.Console
-```
-
-La simulación utiliza respuestas ficticias identificadas como tales. Para usar la API real, configura `TYPESAFE_API_KEY` en tu entorno o guarda la clave mediante User Secrets:
+Requiere .NET 10, Docker Desktop con al menos 8 GB de memoria disponible y espacio para la imagen y el modelo. En Apple Silicon el contenedor usa CPU. La primera orden construye la imagen oficial de Laya `v0.3.20`, descarga el checkpoint multilingüe en un volumen Docker y abre el servicio solo en `127.0.0.1:8000`:
 
 ```sh
-dotnet user-secrets set "Jev:ApiKey" "TU_CLAVE" --project samples/Jev.Console
-dotnet run --project samples/Jev.Console -- mixed
+scripts/laya-local.sh setup
+scripts/laya-local.sh smoke
 ```
 
-Sustituye TU_CLAVE localmente. No subas claves a GitHub. User Secrets es almacenamiento local de desarrollo, no una caja fuerte cifrada. Las llamadas reales pueden consumir saldo. Obtén acceso y clave desde [TypeSafe Console](https://console.typesafe.ai/).
-
-La consola abre un laboratorio retro con colores, menú y tres casos completos: soporte con un cobro duplicado, devolución con evidencias incompletas e incidencia de checkout. Permite procesar un lote, ajustar el umbral de confianza y exportar informes. Empieza siempre en simulación. Consulta el [tutorial de ejemplos](docs/examples.md).
-
-Para una ejecución no interactiva: `dotnet run --project samples/Jev.Console -- incident --simulate`. Los comandos son `support`, `returns`, `incident`, `batch`, `models`, `noul`, `choice`, `score`, `mixed`, `routing` y `cancel`.
+`smoke` prueba `choice`, `noul` y `score` en español, llama también al SDK .NET y reinicia el servidor con Hugging Face en modo sin conexión para verificar que los pesos permanecen. `up` inicia el servicio existente, `status` muestra su salud y `down` lo detiene **sin borrar el volumen**. El checkout oficial fijado y su commit quedan en `artifacts/`, fuera de Git. Consulta [la guía local](docs/laya-local.md).
 
 ## Utilizar la biblioteca
 
 ```csharp
-using Jev.Sdk;
+using TypedDecisions.Sdk;
 
-using var client = new JevClient(); // lee TYPESAFE_API_KEY
-var request = new EvaluationRequest("I was charged twice. Please refund me.")
-    .Add("refund", new NoulQuestion("Does the customer request a refund?"));
-var result = await client.EvaluateAsync(request);
-Console.WriteLine(result.Get<NoulAnswer>("refund").Noul);
+var options = new DecisionClientOptions();
+options.Laya.Model = "multilingual";
+using var client = new DecisionClient(options);
+
+var request = new DecisionRequest(DecisionProvider.Laya, "Me cobraron dos veces.")
+    .Add("refund", new NoulQuestion("¿Solicita un reembolso?"));
+var response = await client.EvaluateAsync(request);
+Console.WriteLine(response.Get<NoulAnswer>("refund").Noul);
 ```
 
-`ChoiceQuestion` acepta opciones con descripciones; `ChoiceQuestion.FromEnum<T>()` utiliza una enumeración y `ChoiceAnswer.AsEnum<T>()` recupera el valor C#. `ScoreQuestion` acepta 2–10 niveles ordenados. `NoulQuestion` permite descripciones opcionales para verdadero y falso. `JevContent.From(...)` admite objetos, arrays y texto; hay una sobrecarga con `JsonTypeInfo<T>` para serializar estados con metadatos generados.
+Para Jev, usa `DecisionProvider.Jev` y configura `TYPESAFE_API_KEY` o `options.Jev.ApiKey`. El cliente puede atender solicitudes de ambos proveedores en la misma instancia. Jev usa `jev-latest` por defecto; Laya enruta automáticamente si no se fija un checkpoint. El catálogo de modelos de TypeSafe está en `IJevModelCatalog.ListJevModelsAsync()`, fuera de la interfaz común.
 
-Consulta [guía de API y configuración](docs/usage.md), [tutorial de ejemplos](docs/examples.md) y [proceso de publicación](docs/releasing.md).
+`ChoiceQuestion.FromEnum<T>()` y `ChoiceAnswer.AsEnum<T>()` facilitan usar enumeraciones. `DecisionContent.From(...)` admite estados estructurados y una sobrecarga con `JsonTypeInfo<T>`. La confianza no garantiza acierto: las fórmulas de Jev y Laya difieren y las muestras **no aplican un umbral por defecto**. Consulta [API y configuración](docs/usage.md).
 
-La [Wiki LLM](docs/wiki/index.md) reúne conocimiento mantenible sobre el proyecto, con arquitectura, fuentes trazables e instrucciones para que los agentes actualicen y revisen la síntesis junto con el código.
+## Ejemplos
 
-## ASP.NET Core
+La consola comienza con respuestas simuladas:
 
 ```sh
-dotnet user-secrets set "Jev:ApiKey" "TU_CLAVE" --project samples/Jev.Web
-dotnet run --project samples/Jev.Web -- --environment Development --urls http://localhost:5080
+dotnet run --project samples/TypedDecisions.Console
 ```
 
-Abre `samples/Jev.Web/requests.http` en tu editor para ejecutar los tres casos, sus variaciones de umbral y un lote. La clave se queda en el servidor. Este ejemplo es para desarrollo local; añade autenticación y límites propios antes de exponerlo a Internet.
+Para consultar Laya local realmente:
 
-Registro en tu aplicación:
+```sh
+dotnet run --project samples/TypedDecisions.Console -- support --laya
+```
+
+El [tutorial](docs/examples.md) explica la consola y la muestra web, incluida la selección de proveedor en cada petición. Los ejemplos no ejecutan reembolsos ni cambios en sistemas.
+
+Registro en ASP.NET Core:
 
 ```csharp
-builder.Services.AddJev(options =>
-    options.ApiKey = builder.Configuration["Jev:ApiKey"]);
-// Inyectar IJevClient donde sea necesario.
+builder.Services.AddTypedDecisions(options =>
+{
+    options.Jev.ApiKey = builder.Configuration["Jev:ApiKey"];
+    options.Laya.Model = "multilingual";
+});
+// Inyectar IDecisionClient e indicar DecisionProvider en cada DecisionRequest.
 ```
 
-## Paquetes NuGet
-
-Nombres previstos: `Jev.Sdk` y `Jev.Sdk.Extensions.DependencyInjection`. Hasta su publicación, genera e instala los paquetes locales:
+## Compilar y verificar
 
 ```sh
-dotnet pack src/Jev.Sdk -c Release -o artifacts/packages
-dotnet pack src/Jev.Sdk.Extensions.DependencyInjection -c Release -o artifacts/packages
-dotnet add TU_PROYECTO package Jev.Sdk --version 0.1.0 --source RUTA_ABSOLUTA_A_ARTIFACTS/packages
+dotnet test TypedDecisions.slnx -c Release
+dotnet pack src/TypedDecisions.Sdk -c Release -o artifacts/packages
+dotnet pack src/TypedDecisions.Sdk.Extensions.DependencyInjection -c Release -o artifacts/packages
 ```
 
-## Verificar
+Las pruebas de Jev que consumen la API real están omitidas por defecto; requieren `JEV_RUN_LIVE_TESTS=1` y una clave. La integración local real con Laya se comprueba mediante `scripts/laya-local.sh smoke`.
 
-```sh
-dotnet test Jev.slnx -c Release
-```
-
-Las pruebas de contrato son locales. La prueba facturable está omitida por defecto; para activarla configura `JEV_RUN_LIVE_TESTS=1` y `TYPESAFE_API_KEY` y ejecuta `dotnet test --filter FullyQualifiedName~LiveTests`.
-
-## Alcance
-
-API directa de TypeSafe: evaluación y listado de modelos; Choice, Score y Noul; estado e instrucciones estructurados; probabilidades, confianza, uso y metadatos HTTP; cancelación y reintentos. No se implementan pasarelas alternativas, generación de texto, streaming ni modalidades ausentes de la API.
-
-La confianza no garantiza acierto. El umbral 0.8 del ejemplo es ilustrativo, no una recomendación validada para producción. Fija una versión del modelo y evalúa tus propios datos antes de automatizar decisiones.
-
-Contrato consultado el 2026-09-21: [API](https://docs.typesafe.ai/api), [modelos](https://docs.typesafe.ai/models), [SDK oficial Python](https://github.com/typesafe-ai/typesafe-sdk-python). Los límites y alias pueden cambiar. Las pruebas locales no acreditan una conexión real al servicio.
+Consulta [publicación](docs/releasing.md), [migración desde Jev.Sdk](docs/migration.md) y la [wiki técnica](docs/wiki/index.md). Las pruebas de contrato locales no sustituyen una evaluación de calidad con datos propios.

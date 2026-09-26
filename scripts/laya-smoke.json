@@ -1,0 +1,9 @@
+{
+  "state": "Me han cobrado dos veces la misma factura y necesito un reembolso hoy.",
+  "model": "multilingual",
+  "questions": {
+    "route": { "type": "choice", "instructions": "¿Qué equipo debe atender la petición?", "criteria": { "facturacion": "Cobros y reembolsos", "tecnico": "Fallos técnicos" } },
+    "risk": { "type": "noul", "instructions": "¿Es urgente atender a esta persona?" },
+    "impact": { "type": "score", "instructions": "Valora el impacto", "criteria": ["Bajo", "Medio", "Alto"] }
+  }
+}

@@ -1,4 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><IsPackable>false</IsPackable><UserSecretsId>jev-sdk-console-examples</UserSecretsId></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../Jev.Scenarios/Jev.Scenarios.csproj" /><PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.0" /></ItemGroup>
-</Project>

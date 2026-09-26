@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- SDK renombrado a TypedDecisions.NET con selección de Jev o Laya en cada petición.
+- Perfiles independientes de autenticación, modelo, URL y reintentos; catálogo de modelos solo para Jev.
+- Entorno Docker local de Laya v0.3.20 con checkpoint multilingüe persistente y prueba sin conexión.
+- Muestras y telemetría actualizadas; sin umbral de confianza predeterminado.
+
 ## 0.2.0
 
 - Laboratorio de decisiones con tres casos realistas: soporte, devoluciones e incidencias operativas.

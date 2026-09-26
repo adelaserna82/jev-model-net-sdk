@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag, such as v0.1.0
+        description: Existing version tag, such as v0.3.0
         required: true
       publishNuget:
         type: boolean
@@ -28,11 +28,11 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          VERSION=$(dotnet msbuild src/Jev.Sdk -getProperty:Version)
+          VERSION=$(dotnet msbuild src/TypedDecisions.Sdk -getProperty:Version)
           test "$RELEASE_TAG" = "v$VERSION"
-      - run: dotnet test Jev.slnx -c Release
-      - run: dotnet pack src/Jev.Sdk -c Release -o artifacts/packages
-      - run: dotnet pack src/Jev.Sdk.Extensions.DependencyInjection -c Release -o artifacts/packages
+      - run: dotnet test TypedDecisions.slnx -c Release
+      - run: dotnet pack src/TypedDecisions.Sdk -c Release -o artifacts/packages
+      - run: dotnet pack src/TypedDecisions.Sdk.Extensions.DependencyInjection -c Release -o artifacts/packages
       - uses: actions/upload-artifact@v4
         with:
           name: release-packages

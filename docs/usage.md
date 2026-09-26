@@ -1,35 +1,32 @@
 # API, configuración y comportamiento
 
-`IJevClient.EvaluateAsync(EvaluationRequest, CancellationToken)` devuelve `EvaluationResponse`. Usa `Add(id, question)` para construir preguntas: detecta identificadores duplicados. No modifiques la petición mientras está en ejecución. El estado se copia como JSON al construir `JevContent`. Las colecciones de criterios son responsabilidad del consumidor y no deben mutarse durante la llamada.
+`IDecisionClient.EvaluateAsync(DecisionRequest, CancellationToken)` acepta un `DecisionRequest` cuyo `DecisionProvider` es obligatorio. `DecisionRequest.Add(id, question)` detecta identificadores duplicados. No modifiques una petición o sus criterios mientras se ejecuta. `DecisionContent` copia el JSON al crearse.
 
-`IJevClient.ListModelsAsync(CancellationToken)` devuelve `ModelsResponse`. No hay validación previa del modelo contra el listado: el servidor puede aceptar versiones que no enumera.
+La respuesta indica `Provider`, `Model`, `Answers`, `Usage`, `Headers` y campos adicionales en `Extra`. `Get<TAnswer>(id)` comprueba existencia y tipo. `NoulAnswer.Noul` es P(verdadero); Choice devuelve elección y distribución; Score devuelve un valor ponderado posiblemente fraccionario. `confidence` se conserva como llegó del proveedor. Laya puede incluir `answer_confidence` y `routing` en `Extra`; no traslades umbrales entre Jev y Laya.
 
-`EvaluationResponse.Get<TAnswer>(id)` comprueba existencia y tipo. Los tipos son `NoulAnswer`, `ChoiceAnswer` y `ScoreAnswer`. Noul es una probabilidad 0–1; Choice incluye la elección y su distribución; Score es una posición ponderada, posiblemente fraccionaria, entre 0 y el último índice de la rúbrica. Confidence es un campo separado, no el máximo de probabilidades. Se conserva lo devuelto por el servidor sin recalcularlo.
-
-`Extra` conserva propiedades adicionales en respuestas. `Headers` conserva cabeceras HTTP de evaluación y modelos. `JevApiException.ResponseBody` permite inspeccionar explícitamente el error; puede contener información enviada al servicio, por lo que no conviene registrarlo automáticamente.
+`IJevModelCatalog.ListJevModelsAsync()` obtiene el catálogo de TypeSafe. El servidor oficial `laya-serve` no ofrece esa ruta. `DecisionClient` implementa ambas interfaces; `AddTypedDecisions` las registra en DI.
 
 ## Opciones
 
-| Opción | Origen alternativo | Valor predeterminado |
-| --- | --- | --- |
-| ApiKey | TYPESAFE_API_KEY | Obligatoria |
-| Model | TYPESAFE_DEFAULT_MODEL | jev-latest |
-| BaseUrl | TYPESAFE_BASE_URL | https://api.typesafe.ai/ |
-| Timeout | Configuración explícita | 60 segundos totales |
-| MaxRetries | Configuración explícita | 2 |
+| Perfil | Clave | Modelo | URL | Reintentos |
+| --- | --- | --- | --- | --- |
+| Jev | `Jev.ApiKey` o `TYPESAFE_API_KEY`, obligatoria al usar Jev | `Jev.Model` o `TYPESAFE_DEFAULT_MODEL`; `jev-latest` | `Jev.BaseUrl` o `TYPESAFE_BASE_URL`; `https://api.typesafe.ai/` | 2 |
+| Laya | `Laya.ApiKey` o `LAYA_API_KEY`, opcional | `Laya.Model` o `LAYA_DEFAULT_MODEL`; sin valor para enrutamiento automático | `Laya.BaseUrl` o `LAYA_BASE_URL`; `http://127.0.0.1:8000/` | 0 |
 
-Opciones explícitas prevalecen sobre variables. Variables vacías se ignoran. `EvaluationRequest.Model` prevalece sobre el modelo del cliente. BaseUrl es la raíz, sin añadir `/v1`. Solo utiliza destinos de confianza: la clave se envía al servidor configurado. HTTPS es obligatorio excepto en loopback para pruebas locales.
+`DecisionClientOptions.Timeout` vale 60 segundos por operación. Las opciones explícitas prevalecen sobre el entorno. Un `ApiKey` explícito vacío desactiva el uso de la variable del entorno correspondiente. `DecisionRequest.Model` prevalece sobre el perfil. Para Laya se aceptan los identificadores explícitos `english`, `multilingual` y `typed-decisions`; `null` deja decidir al router. La muestra local fija `multilingual` para usar solo el checkpoint descargado.
 
-Los parámetros se copian al construir el cliente. Para renovar una clave crea un cliente nuevo. Si aportas HttpClient, conserva su propiedad y configuración; su timeout puede imponer un límite más corto. Desactiva redirecciones en su handler. El cliente creado por el SDK y la integración de DI ya las desactivan.
+Las URL deben ser HTTPS, salvo HTTP en loopback. No se siguen redirecciones en el cliente creado por el SDK y DI. Si aportas tu propio `HttpClient`, su handler y timeout pueden imponer límites diferentes y siguen siendo responsabilidad del llamante. Las claves se añaden a cada mensaje del proveedor correspondiente, no como cabecera global del cliente HTTP.
+
+Las opciones de Jev permiten hasta 255 alternativas Choice y 2–10 niveles Score. Para Laya, el SDK limita 64 preguntas, 100 alternativas por Choice y 512 opciones totales; los propios checkpoints tienen además un presupuesto de tokens por pregunta. Una respuesta puede ser rechazada por el servidor aunque respete los límites numéricos.
 
 ## Errores y reintentos
 
-`ArgumentException`: configuración o petición inválida antes de la llamada. `JevApiException`: respuesta HTTP de error, con estado, cuerpo, cabeceras y Kind. `JevResponseException`: JSON o resultado incompleto/incompatible. `JevTransportException`: problema de conexión. `JevTimeoutException`: plazo agotado. La cancelación del llamante conserva `OperationCanceledException`.
+`ArgumentException` indica configuración o petición inválida. `DecisionApiException` incluye proveedor, estado HTTP, cuerpo, cabeceras y `Kind`; su cuerpo puede contener datos de la petición y no debe registrarse automáticamente. `DecisionResponseException` indica JSON o resultado incompatible; `DecisionTransportException` y `DecisionTimeoutException` distinguen conectividad y plazo. La cancelación del llamante conserva `OperationCanceledException`.
 
-Solo 429, 529, 502, 503 y 504 se reintentan, hasta el presupuesto configurado. Se respeta Retry-After (segundos o fecha); en su ausencia se utiliza espera exponencial desde 250 ms y variación de hasta 99 ms. El timeout total incluye esas esperas. Los fallos de transporte no se repiten automáticamente: una petición podría haber llegado al servidor. No se promete ejecución exactamente una vez ni ausencia de facturación duplicada al reintentar. MaxRetries=0 desactiva los reintentos.
+Se reintentan 429, 529, 502, 503 y 504 hasta el presupuesto configurado, respetando `Retry-After`. El timeout total incluye esperas y reintentos. Los fallos de transporte no se repiten automáticamente porque una petición podría haber llegado al servidor. Laya tiene cero reintentos por defecto para no amplificar una sobrecarga local.
 
 ## Diagnóstico
 
-ActivitySource y Meter se llaman `Jev.Sdk`. Métricas: `jev.request.duration` (segundos), `jev.request.errors`, `jev.request.retries`. No contienen estado, instrucciones, respuestas ni claves. Las duraciones miden la operación HTTP con reintentos; la validación semántica posterior se comunica mediante excepción. Puedes conectar un listener u OpenTelemetry desde tu aplicación.
+`ActivitySource` y `Meter` se llaman `TypedDecisions.Sdk`. Métricas: `decisions.request.duration` (segundos), `decisions.request.errors` y `decisions.request.retries`, con etiqueta `provider`. No contienen estado, instrucciones, respuestas ni claves. La validación semántica posterior al HTTP se comunica mediante excepción.
 
-La serialización del estado admite JsonTypeInfo; no se declara compatibilidad integral con Native AOT porque los payloads internos usan serialización dinámica.
+La serialización admite `JsonTypeInfo<T>` para el estado; los payloads internos usan serialización dinámica, por lo que no se declara compatibilidad integral con Native AOT.
