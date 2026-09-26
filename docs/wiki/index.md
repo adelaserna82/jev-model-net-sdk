@@ -1,6 +1,6 @@
 # Wiki LLM de TypedDecisions.NET
 
-Síntesis mantenible del SDK comunitario no oficial para Jev y Laya. El código, las pruebas y las guías conservan la autoridad. Lee las [reglas de mantenimiento](AGENTS.md), las [fuentes](sources.md) y el [registro](log.md).
+Síntesis mantenible del SDK comunitario no oficial para Jev y Laya. Se integra desde el código fuente mediante referencias a los proyectos .NET. El código, las pruebas y las guías conservan la autoridad. Lee las [reglas de mantenimiento](AGENTS.md), las [fuentes](sources.md) y el [registro](log.md).
 
 ## Rutas de lectura
 

@@ -15,3 +15,10 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 - **Fuentes:** código y pruebas de esta rama; TypeSafe API y Laya v0.3.20, Compose y guía Docker oficiales.
 - **Páginas actualizadas:** índice, arquitectura, fuentes y registro.
 - **Resultado:** se documentó la elección por petición, el catálogo exclusivo de Jev y el contenedor local con checkpoint multilingüe.
+
+## [2026-09-26] revisión | Distribución desde el código fuente
+
+- **Operación:** revisión de la wiki tras decidir que el SDK se integra desde el repositorio.
+- **Fuentes:** proyectos .NET, [README](../../README.md) y configuración de CI de la rama actual.
+- **Páginas actualizadas:** índice, arquitectura y registro.
+- **Resultado:** la wiki indica cómo integrar el SDK mediante `ProjectReference`.
