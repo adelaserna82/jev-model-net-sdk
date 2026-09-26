@@ -19,6 +19,6 @@ Síntesis mantenible del SDK comunitario no oficial para Jev y Laya. Se integra 
 | Preguntas y respuestas | [`Questions.cs`](../../src/TypedDecisions.Sdk/Questions.cs), [`Answers.cs`](../../src/TypedDecisions.Sdk/Answers.cs) |
 | Transporte y validación | [`DecisionHttpTransport.cs`](../../src/TypedDecisions.Sdk/Internal/DecisionHttpTransport.cs), [`DecisionResponseValidator.cs`](../../src/TypedDecisions.Sdk/Internal/DecisionResponseValidator.cs) |
 | Inyección de dependencias | [`ServiceCollectionExtensions.cs`](../../src/TypedDecisions.Sdk.Extensions.DependencyInjection/ServiceCollectionExtensions.cs) |
-| Entorno Laya | [`compose.laya.yaml`](../../compose.laya.yaml), [`laya-local.sh`](../../scripts/laya-local.sh) |
+| Entorno Laya | [`compose.laya.yaml`](../../compose.laya.yaml), [petición de prueba](../../tests/fixtures/laya-smoke.json) |
 
 El SDK devuelve una decisión estructurada; tu aplicación decide qué hacer con ella. Los valores de confianza de distintos proveedores no comparten una calibración.

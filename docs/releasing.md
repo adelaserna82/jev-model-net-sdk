@@ -7,7 +7,7 @@ Para integrar el SDK en otra aplicación, clona el repositorio y añade una refe
 Antes de publicar cambios de código en la rama principal:
 
 1. Ejecuta `dotnet test TypedDecisions.slnx -c Release` y `dotnet build TypedDecisions.slnx -c Release`.
-2. Ejecuta `scripts/laya-local.sh smoke` si cambias el contrato HTTP o la integración con Laya.
+2. Si cambias el contrato HTTP o la integración con Laya, ejecuta `docker compose -f compose.laya.yaml up --build -d --wait` y `docker compose -f compose.laya.yaml --profile smoke run --rm laya-smoke`.
 3. Actualiza `CHANGELOG.md` y la guía de migración cuando cambie la API pública.
 4. Revisa el resultado de CI en Ubuntu y Windows. El workflow solo compila, prueba y ejecuta la simulación; no empaqueta el SDK.
 

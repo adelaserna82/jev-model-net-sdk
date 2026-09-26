@@ -26,6 +26,13 @@ Registro cronológico. Añade las entradas nuevas al final; no reescribas entrad
 ## [2026-09-26] revisión | Compose local de Laya
 
 - **Operación:** incorporación de la configuración Docker visible en el repositorio.
-- **Fuentes:** Dockerfile oficial de Laya v0.3.20, [`compose.laya.yaml`](../../compose.laya.yaml) y prueba real con [`laya-local.sh`](../../scripts/laya-local.sh).
+- **Fuentes:** Dockerfile oficial de Laya v0.3.20 y [`compose.laya.yaml`](../../compose.laya.yaml).
 - **Páginas actualizadas:** índice, arquitectura y registro.
 - **Resultado:** el Compose muestra cómo se construye y arranca `laya-serve`, dónde se guardan los pesos y qué puerto se publica.
+
+## [2026-09-26] revisión | Flujo multiplataforma de Laya
+
+- **Operación:** eliminación del envoltorio Bash y traslado de la prueba HTTP al Compose.
+- **Fuentes:** [`compose.laya.yaml`](../../compose.laya.yaml), [petición de prueba](../../tests/fixtures/laya-smoke.json) y [guía local](../laya-local.md).
+- **Páginas actualizadas:** índice, arquitectura y registro.
+- **Resultado:** arranque, prueba HTTP y parada se realizan con Docker Compose en Windows, Linux y macOS.

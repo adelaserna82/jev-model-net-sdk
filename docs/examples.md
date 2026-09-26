@@ -13,7 +13,7 @@ El menú comienza en simulación. Permite cambiar de proveedor con `P`, activar 
 Para una ejecución directa con Laya real, inicia primero el [contenedor local](laya-local.md):
 
 ```sh
-scripts/laya-local.sh setup
+docker compose -f compose.laya.yaml up --build -d --wait
 dotnet run --project samples/TypedDecisions.Console -- support --laya
 ```
 

@@ -5,7 +5,7 @@
 - SDK renombrado a TypedDecisions.NET con selección de Jev o Laya en cada petición.
 - Perfiles independientes de autenticación, modelo, URL y reintentos; catálogo de modelos solo para Jev.
 - Entorno Docker local de Laya v0.3.20 con checkpoint multilingüe persistente y prueba sin conexión.
-- Compose local visible para construir el Dockerfile oficial y arrancar Laya directamente.
+- Compose local para construir el Dockerfile oficial, arrancar Laya y ejecutar la prueba HTTP en Windows, Linux y macOS.
 - Muestras y telemetría actualizadas; sin umbral de confianza predeterminado.
 - Distribución solo como código fuente; sin paquetes NuGet de TypedDecisions.NET.
 

@@ -1,31 +1,36 @@
 # Laya local en Docker
 
-El [Compose del repositorio](../compose.laya.yaml) muestra la configuración completa del servicio. Docker construye el Dockerfile **oficial** de [Laya v0.3.20](https://github.com/NandhaKishorM/laya/releases/tag/v0.3.20), fijado al commit `23a17522aa4942da6cce53a995a275760320b691`. Dentro de la imagen instala Python 3.11, PyTorch para CPU y las dependencias del servidor `laya-serve`; no hace falta instalar Python en el equipo. El volumen guarda los pesos fuera del contenedor.
+El [Compose del repositorio](../compose.laya.yaml) construye el Dockerfile **oficial** de [Laya v0.3.20](https://github.com/NandhaKishorM/laya/releases/tag/v0.3.20), fijado al commit `23a17522aa4942da6cce53a995a275760320b691`. La imagen instala Python 3.11, PyTorch para CPU y `laya-serve`. No necesitas Bash ni Python en el equipo: las órdenes siguientes son iguales en Windows, Linux y macOS. En Windows usa Docker Desktop con contenedores Linux; en Linux sirve Docker Engine con Compose. La aplicación de muestra .NET requiere .NET 10.
 
-En Apple Silicon, Docker ejecuta Linux ARM64 y **CPU**; la aceleración MPS requiere Python nativo en macOS. Asigna al menos 8 GB de RAM a Docker Desktop. La imagen y el checkpoint necesitan espacio adicional. [Guía Docker oficial](https://nandhakishorm.github.io/laya/docker/).
+En Apple Silicon, Docker ejecuta Linux ARM64 y **CPU**; la aceleración MPS requiere Python nativo en macOS. Asigna al menos 8 GB de RAM a Docker Desktop. La imagen y el checkpoint necesitan espacio adicional. Consulta la [guía Docker oficial](https://nandhakishorm.github.io/laya/docker/).
 
-Puedes arrancarlo directamente con Compose desde la raíz del repositorio:
+Desde la raíz del repositorio:
 
 ```sh
 docker compose -f compose.laya.yaml up --build -d --wait
-curl http://127.0.0.1:8000/health
+docker compose -f compose.laya.yaml ps
+docker compose -f compose.laya.yaml --profile smoke run --rm laya-smoke
+dotnet run --project samples/TypedDecisions.Console -- support --laya
+```
+
+`laya-serve` carga solo el checkpoint `multilingual`. El servicio de prueba `laya-smoke` usa la [petición en español](../tests/fixtures/laya-smoke.json) para verificar `noul`, `choice`, `score` y el checkpoint elegido. Ambos servicios usan la misma imagen; Python se ejecuta dentro del contenedor. La muestra .NET realiza una evaluación aparte a través del SDK.
+
+El servidor publica `127.0.0.1:8000`. Los pesos viven en el volumen `typeddecisions-laya-model-cache`, que persiste al detener o recrear el servicio. Para parar sin borrarlos:
+
+```sh
 docker compose -f compose.laya.yaml down
 ```
 
-El script añade comprobación de versión y pruebas de extremo a extremo. La prueba usa el Python del propio contenedor y .NET 10 en el equipo para verificar el SDK:
+Para comprobar la caché después de la primera descarga, recrea el servicio con el modo sin conexión de Hugging Face y repite la evaluación:
 
 ```sh
-scripts/laya-local.sh setup   # Inicia Docker Desktop si hace falta, registra el commit, construye y descarga multilingual
-scripts/laya-local.sh status  # Comprueba contenedor y /health
-scripts/laya-local.sh smoke   # HTTP + SDK .NET + reinicio sin red
-scripts/laya-local.sh down    # Detiene, conserva los pesos
-scripts/laya-local.sh up      # Reutiliza la imagen y los pesos
+docker compose --env-file tests/fixtures/laya-offline.env -f compose.laya.yaml up -d --force-recreate --wait
+docker compose --env-file tests/fixtures/laya-offline.env -f compose.laya.yaml --profile smoke run --rm laya-smoke
+dotnet run --project samples/TypedDecisions.Console -- support --laya
 ```
 
-`setup` guarda una copia ignorada del código oficial en `artifacts/laya-upstream` y el SHA completo en `artifacts/laya-upstream-commit.txt`. El Compose funciona directamente sin esa copia: Docker obtiene el mismo commit durante la construcción.
+Para volver al modo normal, ejecuta `docker compose -f compose.laya.yaml up -d --force-recreate --wait`. La primera descarga necesita Internet. `HF_HUB_OFFLINE=1` impide consultar Hugging Face, pero no aísla completamente la red del contenedor.
 
-El servicio publica `127.0.0.1:8000` y solo precarga `multilingual`. El volumen persistente se llama `typeddecisions-laya-model-cache`. `down` no lo borra. `smoke` deja el servicio en modo `HF_HUB_OFFLINE=1` tras comprobar que funciona desde la caché; `up` lo devuelve al modo normal. No expongas el puerto fuera de loopback sin añadir autenticación y TLS.
+La muestra .NET fija `options.Laya.Model = "multilingual"`. Si llamas al servidor directamente, envía `"model":"multilingual"`; de lo contrario, el router podría elegir otro checkpoint y descargarlo. Puedes configurar `LAYA_API_KEY` para exigir autenticación local. No expongas el puerto fuera de loopback sin añadir autenticación y TLS.
 
-La muestra .NET fija `options.Laya.Model = "multilingual"`. Si llamas al servidor directamente, envía `"model":"multilingual"`; de lo contrario, el router podría elegir otro checkpoint y descargarlo. La primera descarga necesita Internet; el modo sin conexión solo funciona después de que los pesos estén almacenados.
-
-La actualización de Laya debe ser deliberada: cambia el commit en `compose.laya.yaml` y `TAG`/`EXPECTED_COMMIT` en el script, revisa las notas de la versión nueva, reconstruye y vuelve a ejecutar `smoke`. No edites el checkout de `artifacts/`; Git lo ignora.
+Para actualizar Laya deliberadamente, cambia el commit fijado en `compose.laya.yaml`, revisa las notas de la versión nueva, reconstruye y repite la prueba. El código y los pesos de Laya no se guardan en Git.

@@ -4,14 +4,14 @@ SDK comunitario **no oficial** para decisiones tipadas con [TypeSafe Jev](https:
 
 ## Probar Laya en local
 
-Requiere .NET 10, Docker Desktop con al menos 8 GB de memoria disponible y espacio para la imagen y el modelo. En Apple Silicon el contenedor usa CPU. El [Compose del repositorio](compose.laya.yaml) construye el Dockerfile oficial de Laya fijado al commit de `v0.3.20`: instala Python, PyTorch para CPU y el servidor HTTP dentro de la imagen. En el primer arranque descarga el checkpoint multilingüe a un volumen persistente y abre el servicio solo en `127.0.0.1:8000`:
+Para levantar Laya basta Docker con Compose, al menos 8 GB de memoria disponible y espacio para la imagen y el modelo. En Windows usa Docker Desktop con contenedores Linux; en Apple Silicon el contenedor usa CPU. .NET 10 solo hace falta para ejecutar las muestras y el SDK. El [Compose del repositorio](compose.laya.yaml) construye el Dockerfile oficial de Laya fijado al commit de `v0.3.20`: instala Python, PyTorch para CPU y el servidor HTTP dentro de la imagen. En el primer arranque descarga el checkpoint multilingüe a un volumen persistente y abre el servicio solo en `127.0.0.1:8000`:
 
 ```sh
 docker compose -f compose.laya.yaml up --build -d --wait
-scripts/laya-local.sh smoke
+docker compose -f compose.laya.yaml --profile smoke run --rm laya-smoke
 ```
 
-`scripts/laya-local.sh setup` es una alternativa que abre Docker Desktop si hace falta, guarda una copia ignorada del código oficial y registra el commit resuelto. `smoke` prueba `choice`, `noul` y `score` en español, llama también al SDK .NET y reinicia el servidor con Hugging Face en modo sin conexión para verificar que los pesos permanecen. `up` inicia el servicio existente, `status` muestra su salud y `down` lo detiene **sin borrar el volumen**. Consulta [la guía local](docs/laya-local.md).
+El servicio opcional `laya-smoke` prueba `choice`, `noul` y `score` en español usando Python **dentro de la imagen**. Para comprobar el cliente .NET, ejecuta la muestra con `--laya`. `docker compose -f compose.laya.yaml down` detiene el servicio **sin borrar el volumen**. La [guía local](docs/laya-local.md) incluye el reinicio en modo sin conexión. Los mismos comandos de Compose funcionan en Windows, Linux y macOS.
 
 ## Utilizar la biblioteca
 
@@ -78,6 +78,6 @@ dotnet test TypedDecisions.slnx -c Release
 dotnet build TypedDecisions.slnx -c Release
 ```
 
-Las pruebas de Jev que consumen la API real están omitidas por defecto; requieren `JEV_RUN_LIVE_TESTS=1` y una clave. La integración local real con Laya se comprueba mediante `scripts/laya-local.sh smoke`.
+Las pruebas de Jev que consumen la API real están omitidas por defecto; requieren `JEV_RUN_LIVE_TESTS=1` y una clave. La integración local real con Laya se comprueba con el servicio `laya-smoke` del Compose y la muestra .NET.
 
 Consulta [mantenimiento del repositorio](docs/releasing.md), [migración desde Jev.Sdk](docs/migration.md) y la [wiki técnica](docs/wiki/index.md). Las pruebas de contrato locales no sustituyen una evaluación de calidad con datos propios.

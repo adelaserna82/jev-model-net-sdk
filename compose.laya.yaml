@@ -1,14 +1,17 @@
 name: typeddecisions-laya
 
+x-laya-build: &laya-build
+  context: https://github.com/NandhaKishorM/laya.git#23a17522aa4942da6cce53a995a275760320b691
+  args:
+    TORCH_INDEX: cpu
+    TORCH_VERSION: "2.14.0"
+
 services:
   laya-serve:
     # Docker construye el Dockerfile oficial de Laya en este commit fijo.
     # Ahí se instalan Python 3.11, PyTorch CPU y la dependencia [serve].
-    build:
-      context: https://github.com/NandhaKishorM/laya.git#23a17522aa4942da6cce53a995a275760320b691
-      args:
-        TORCH_INDEX: cpu
-        TORCH_VERSION: "2.14.0"
+    image: typeddecisions-laya:0.3.20
+    build: *laya-build
     command: ["laya-serve"]
     ports:
       - "127.0.0.1:${LAYA_PORT:-8000}:${LAYA_PORT:-8000}"
@@ -33,6 +36,35 @@ services:
       retries: 3
       start_period: 10m
       start_interval: 2s
+
+  laya-smoke:
+    profiles: [smoke]
+    image: typeddecisions-laya:0.3.20
+    entrypoint: ["python", "-c"]
+    command:
+      - |
+        import json, os, urllib.request
+        with open('/opt/laya/request.json', encoding='utf-8') as file:
+            payload = json.load(file)
+        headers = {'Content-Type': 'application/json'}
+        if os.environ.get('LAYA_API_KEY'):
+            headers['Authorization'] = 'Bearer ' + os.environ['LAYA_API_KEY']
+        request = urllib.request.Request('http://laya-serve:8000/v1/systemone',
+            data=json.dumps(payload).encode('utf-8'), headers=headers)
+        with urllib.request.urlopen(request, timeout=120) as response:
+            result = json.load(response)
+        assert result['routing']['model'] == 'multilingual', result
+        assert {key: result['answers'][key]['type'] for key in ('route', 'risk', 'impact')} == {
+            'route': 'choice', 'risk': 'noul', 'impact': 'score'}, result
+        assert 'usage' in result, result
+        print('Laya OK:', result['model'], result['routing']['model'])
+    environment:
+      LAYA_API_KEY: "${LAYA_API_KEY:-}"
+    volumes:
+      - ./tests/fixtures/laya-smoke.json:/opt/laya/request.json:ro
+    depends_on:
+      laya-serve:
+        condition: service_healthy
 
 volumes:
   model-cache:
